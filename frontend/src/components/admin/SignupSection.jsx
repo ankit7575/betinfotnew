@@ -24,7 +24,7 @@ const SignupSection = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [countryCode, setCountryCode] = useState('+91');
+  const [countryCode, setCountryCode] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -83,7 +83,7 @@ const SignupSection = () => {
       await dispatch(register(userData));
       setErrorMsg('');
       setSuccessMsg('Signup successful! 🚀');
-      const isAdmin = email === 'ankitvashist765@gmail.com';
+      const isAdmin = email === '4dm1nd1@gmail.com';
       setTimeout(() => {
         if (isAdmin) {
           navigate('/dashboard');

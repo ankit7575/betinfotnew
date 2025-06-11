@@ -9,6 +9,11 @@ import {
 import './ViewPlan.css';
 import { Modal, Button, Form } from 'react-bootstrap';
 
+const COIN_TYPES = [
+  { value: 'gold', label: 'Gold (Single match)' },
+  { value: 'diamond', label: 'Diamond (All matches)' },
+];
+
 const AdminPlanDashboard = () => {
   const dispatch = useDispatch();
   const { plans, loading, error } = useSelector((state) => state.planList || {});
@@ -20,6 +25,7 @@ const AdminPlanDashboard = () => {
     name: '',
     description: '',
     price: '',
+    coinType: 'gold', // default
     totalCoins: '',
   });
 
@@ -29,8 +35,9 @@ const AdminPlanDashboard = () => {
   }, [dispatch]);
 
   const openAddModal = () => {
-    setForm({ name: '', description: '', price: '', totalCoins: '' });
+    setForm({ name: '', description: '', price: '', coinType: 'gold', totalCoins: '' });
     setIsEditMode(false);
+    setCurrentPlanId(null);
     setShowModal(true);
   };
 
@@ -39,6 +46,7 @@ const AdminPlanDashboard = () => {
       name: plan.name,
       description: plan.description,
       price: plan.price,
+      coinType: plan.coinType || 'gold',
       totalCoins: plan.totalCoins,
     });
     setCurrentPlanId(plan._id);
@@ -49,27 +57,33 @@ const AdminPlanDashboard = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this plan?')) {
       await dispatch(deletePlan(id));
-      dispatch(getAllPlans()); // Refresh list
+      dispatch(getAllPlans());
     }
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    const planData = {
+      ...form,
+      price: Number(form.price),
+      totalCoins: Number(form.totalCoins),
+    };
     if (isEditMode) {
-      await dispatch(editPlan(currentPlanId, form));
+      await dispatch(editPlan(currentPlanId, planData));
     } else {
-      await dispatch(addPlan(form));
+      await dispatch(addPlan(planData));
     }
     setShowModal(false);
-    dispatch(getAllPlans()); // Refresh list
+    setCurrentPlanId(null);
+    dispatch(getAllPlans());
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm({
-      ...form,
-      [name]: name === 'price' || name === 'totalCoins' ? Number(value) : value,
-    });
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   return (
@@ -93,6 +107,7 @@ const AdminPlanDashboard = () => {
                   <th>Plan Name</th>
                   <th>Description</th>
                   <th>Price ($)</th>
+                  <th>Coin Type</th>
                   <th>Total Coins</th>
                   <th>Actions</th>
                 </tr>
@@ -104,6 +119,7 @@ const AdminPlanDashboard = () => {
                     <td>{plan.name}</td>
                     <td>{plan.description}</td>
                     <td>{plan.price}</td>
+                    <td className="text-capitalize">{plan.coinType}</td>
                     <td>{plan.totalCoins}</td>
                     <td>
                       <Button variant="primary" size="sm" className="me-2" onClick={() => openEditModal(plan)}>Edit</Button>
@@ -124,6 +140,7 @@ const AdminPlanDashboard = () => {
                   <p className="card-text">{plan.description}</p>
                   <p className="card-text">
                     <strong>Price:</strong> {plan.price}<br />
+                    <strong>Coin Type:</strong> <span className="text-capitalize">{plan.coinType}</span><br />
                     <strong>Total Coins:</strong> {plan.totalCoins}
                   </p>
                   <div className="d-flex justify-content-between">
@@ -175,7 +192,21 @@ const AdminPlanDashboard = () => {
                 value={form.price}
                 onChange={handleChange}
                 required
+                min={0}
               />
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Coin Type</Form.Label>
+              <Form.Select
+                name="coinType"
+                value={form.coinType}
+                onChange={handleChange}
+                required
+              >
+                {COIN_TYPES.map((opt) => (
+                  <option value={opt.value} key={opt.value}>{opt.label}</option>
+                ))}
+              </Form.Select>
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Total Coins</Form.Label>
@@ -185,6 +216,7 @@ const AdminPlanDashboard = () => {
                 value={form.totalCoins}
                 onChange={handleChange}
                 required
+                min={1}
               />
             </Form.Group>
           </Modal.Body>

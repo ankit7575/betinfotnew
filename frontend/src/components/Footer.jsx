@@ -66,9 +66,7 @@ const Footer = () => {
                 <p className="text-dark text-decoration-none d-block">
                   <FaEnvelope className="me-2 white" /> <a href="mailto:reachus@astrafin.org" className="white">reachus@Betinfo.live</a>
                 </p>
-                <p className="text-dark text-decoration-none d-block">
-                  <FaPhone className="me-2 white" /> <a href="tel:+158484212154" className="white">+158484212154</a>
-                </p>
+               
               </div>
 
               {/* Contact Form */}

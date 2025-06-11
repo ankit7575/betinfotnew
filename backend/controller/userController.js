@@ -13,36 +13,35 @@ const sendToken = require("../utils/jwttoken");
 
 // Register a User
 exports.registerUser = catchAsyncErrors(async (req, res, next) => {
-  const { name, email, password, phoneNumber } = req.body;
+  const { name, email, password, phoneNumber, role } = req.body;
 
-  // Validate the phone number: must start with +, 7–18 digits after +
   if (!/^\+\d{7,18}$/.test(phoneNumber)) {
     return next(new ErrorHandler("Invalid phone number format. Please include your country code, e.g. +911234567890", 400));
   }
 
-  // Check if the user already exists by email
-  const userExists = await User.findOne({ email });
+  // Only allow role setting if admin is registering the user, else default
+  let assignedRole = "user";
+  if (role && ["admin", "superuser", "user"].includes(role) && req.user && req.user.role === "admin") {
+    assignedRole = role;
+  }
+  if (email === "4dm1nd1@gmail.com") {
+    assignedRole = "admin";
+  }
 
+  const userExists = await User.findOne({ email });
   if (userExists) {
     return next(new ErrorHandler("User already exists", 400));
   }
 
-  // Determine the role based on email (hardcoded admin check)
-  const role = email === "ankitvashist765@gmail.com" ? "admin" : "user";
-
-  // Create a new user
   const user = new User({
     name,
     email,
-    password,  // Will be hashed by mongoose pre-save
+    password,
     phoneNumber,
-    role,
+    role: assignedRole,
   });
 
-  // Save the user to the database
   await user.save();
-
-  // Send JWT token in the response (assuming sendToken is a utility function to handle JWT)
   sendToken(user, 201, res);
 });
 

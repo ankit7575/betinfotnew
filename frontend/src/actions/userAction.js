@@ -238,8 +238,8 @@ export const updateUserRole = (id, roleData) => async (dispatch) => {
   try {
     dispatch({ type: UPDATE_USER_ROLE_REQUEST });
 
-    const config = { headers: { "Content-Type": "application/json" } };
-    const { data } = await axios.put(`${API_URL}/admin/user/${id}`, roleData, config);
+    const config = getAuthConfig();
+    const { data } = await axios.put(`${API_URL}/admin/user/${id}/role/`, roleData, config);
 
     dispatch({ type: UPDATE_USER_ROLE_SUCCESS, payload: data.success });
   } catch (error) {

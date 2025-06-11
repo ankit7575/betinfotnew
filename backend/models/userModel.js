@@ -6,14 +6,15 @@ const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const Plan = require("./planModel");
 
-// --- Coin Schema (One coin = one match event only) ---
+// --- Coin Schema (Support for 'gold' and 'diamond') ---
 const coinSchema = new Schema({
   id: { type: String, required: true }, // Unique coin ID
   shareableCode: { type: String, required: true },
+  type: { type: String, enum: ['gold', 'diamond'], required: true }, // <--- COIN TYPE
   activeAt: { type: Date },
   expiresAt: { type: Date }, // Set when redeemed
   usedAt: { type: Date, default: null }, // When redeemed
-  usedForEventId: { type: String, default: null }, // Which match/event
+  usedForEventId: { type: String, default: null }, // For 'gold': eventId; for 'diamond': null
 });
 
 // --- Key Schema ---
@@ -45,17 +46,19 @@ const transactionSchema = new Schema({
 
 // --- User Schema ---
 const userSchema = new Schema({
+  name:{type: String,
+    required: true},
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   phoneNumber: {
     type: String,
     required: true,
     trim: true,
-    // ALLOW: must start with +, then 7-18 digits
     match: [/^\+\d{7,18}$/, "Please enter a valid phone number with country code (e.g., +911234567890)"],
   },
   isActive: { type: Boolean, default: true },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  // ---- ROLES: 'user', 'admin', 'superuser'
+  role: { type: String, enum: ['user', 'admin', 'superuser'], default: 'user' },
   keys: [keySchema],
   transactions: [transactionSchema],
   keysAvailable: { type: Number, default: 0 },
@@ -73,19 +76,16 @@ userSchema.pre('save', async function (next) {
 
 // --- User Methods ---
 
-// Compare password
 userSchema.methods.comparePassword = async function (password) {
   return bcrypt.compare(password, this.password);
 };
 
-// Get JWT Token
 userSchema.methods.getJWTToken = function () {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE,
   });
 };
 
-// Get Password Reset Token
 userSchema.methods.getResetPasswordToken = function () {
   const resetToken = crypto.randomBytes(20).toString("hex");
   this.resetPasswordToken = crypto.createHash("sha256").update(resetToken).digest("hex");
@@ -105,19 +105,24 @@ userSchema.methods.addTransaction = function (transactionId, plan) {
   return this.save();
 };
 
-// Approve a transaction and assign coins
-userSchema.methods.approveTransaction = async function (transactionId, coinsToAdd, planId) {
+/**
+ * Approve a transaction and assign coins
+ * @param {string} transactionId
+ * @param {Array<{type: 'gold'|'diamond'}>} coinsToAddArr  // EX: [{type: 'gold'}, {type: 'diamond'}]
+ * @param {string} planId
+ */
+userSchema.methods.approveTransaction = async function (transactionId, coinsToAddArr, planId) {
   const txn = this.transactions.find(t => t.transactionId === transactionId);
   if (!txn) throw new Error('Transaction not found');
   const plan = await Plan.findById(planId);
   if (!plan) throw new Error('Plan not found');
-
   txn.status = 'completed';
 
-  // Generate coins for the plan
-  const coins = Array.from({ length: coinsToAdd }, (_, i) => ({
+  // Generate coins for the plan, supporting type
+  const coins = coinsToAddArr.map((coinObj, i) => ({
     id: `coin-${Date.now()}-${i}`,
     shareableCode: `COIN-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+    type: coinObj.type,  // <--- assign 'gold' or 'diamond'
     activeAt: null,
     expiresAt: null,
     usedAt: null,
@@ -135,7 +140,7 @@ userSchema.methods.approveTransaction = async function (transactionId, coinsToAd
 
   this.keys.push(key);
   this.keysAvailable += 1;
-  this.coinAvailable += coinsToAdd;
+  this.coinAvailable += coinsToAddArr.length;
   await this.save();
   return this;
 };
@@ -148,25 +153,37 @@ userSchema.methods.rejectTransaction = function (transactionId) {
   return this.save();
 };
 
-// --- Redeem Coin: One coin = One match event only ---
-userSchema.methods.redeemCoinForEvent = function (coinId, eventId) {
+/**
+ * Redeem a coin
+ * GOLD: Only one event, per coin
+ * DIAMOND: For all matches, for 24h (usedForEventId is null)
+ * Usage: user.redeemCoin({ coinId, type: 'gold', eventId }) OR { coinId, type: 'diamond' }
+ */
+userSchema.methods.redeemCoin = function ({ coinId, type, eventId }) {
   for (const key of this.keys) {
     for (const coin of key.coin) {
       if (
         coin.id === coinId &&
-        !coin.usedAt &&
-        !coin.usedForEventId
+        coin.type === type &&
+        !coin.usedAt
       ) {
         const now = new Date();
         coin.usedAt = now;
-        coin.usedForEventId = eventId;
         coin.activeAt = now;
-        coin.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours
+        coin.expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+        if (type === 'gold') {
+          if (!eventId) throw new Error('Gold coin requires eventId');
+          coin.usedForEventId = eventId;
+        } else {
+          coin.usedForEventId = null; // Diamond: for all events
+        }
 
         this.coinAvailable = Math.max(0, (this.coinAvailable || 0) - 1);
+
         return this.save().then(() => ({
           success: true,
-          message: "Coin successfully redeemed for this match event.",
+          message: `Coin (${type}) successfully redeemed.`,
           redeemedCoin: coin
         }));
       }
@@ -175,30 +192,54 @@ userSchema.methods.redeemCoinForEvent = function (coinId, eventId) {
   throw new Error('Coin not found or already used/redeemed.');
 };
 
-// Check if user has a valid coin for an event
-userSchema.methods.hasValidCoinForEvent = function (eventId) {
+// --- ACCESS CHECK METHODS ---
+// For admin/superuser: always access
+// For Diamond coin: access all events for 24h
+// For Gold coin: access specific event for 24h
+userSchema.methods.hasValidAccessForEvent = function (eventId) {
   const now = new Date();
+
+  // --- Admin or Superuser: always access ---
+  if (this.role === 'admin' || this.role === 'superuser') {
+    return { access: true, type: this.role, expiresAt: null }; // no expiry for admins/superusers
+  }
+
+  // --- Diamond Coin: access all events during 24h ---
   for (const key of this.keys) {
     for (const coin of key.coin) {
       if (
+        coin.type === 'diamond' &&
+        coin.usedAt &&
+        coin.expiresAt &&
+        new Date(coin.expiresAt) > now
+      ) {
+        return { access: true, type: 'diamond', expiresAt: coin.expiresAt };
+      }
+    }
+  }
+  // --- Gold Coin: per event during 24h ---
+  for (const key of this.keys) {
+    for (const coin of key.coin) {
+      if (
+        coin.type === 'gold' &&
         coin.usedForEventId === eventId &&
         coin.usedAt &&
         coin.expiresAt &&
         new Date(coin.expiresAt) > now
       ) {
-        return true;
+        return { access: true, type: 'gold', expiresAt: coin.expiresAt };
       }
     }
   }
-  return false;
+  return { access: false };
 };
 
-// Count all coins available for use (unused for any event)
+// Count all coins available for use (unused)
 userSchema.methods.countActiveCoins = function () {
   let count = 0;
   for (const key of this.keys) {
     for (const coin of key.coin) {
-      if (!coin.usedAt && !coin.usedForEventId) count++;
+      if (!coin.usedAt) count++;
     }
   }
   return count;

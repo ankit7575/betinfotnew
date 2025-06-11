@@ -6,6 +6,7 @@ const {
     getUserCoins,
     getAllUsersKeysAndCoins,
     redeemCoinForEvent,
+    redeemCoinForAllMatches,  // <-- Add this
     redeemSharedCoin,
     checkCoinExpiry,
     getMatchDetailsForUser,
@@ -16,17 +17,13 @@ router.get('/coins', isAuthenticatedUser, getUserCoins);
 router.get('/keys', isAuthenticatedUser,getUserKeys );
 router.get('/keys-coins', isAuthenticatedUser, authorizeRoles("admin"),getAllUsersKeysAndCoins );
 
-
-// Route to redeem a coin for a match
+// Route to redeem a GOLD coin for a match
 router.post('/redeem/event', isAuthenticatedUser, redeemCoinForEvent);
+// Route to redeem a DIAMOND or GOLD coin (unified logic)
+router.post('/redeem/all', isAuthenticatedUser, redeemCoinForAllMatches);
 
-
-// Route to use a coin (activate match pass)
 router.post('/redeem/shared', isAuthenticatedUser, redeemSharedCoin);
-
-// Route to check if a coin has expired
 router.post('/check/expiry', isAuthenticatedUser, checkCoinExpiry);
 router.get('/matches/user', isAuthenticatedUser, getMatchDetailsForUser);
-
 
 module.exports = router;

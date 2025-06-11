@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from "react";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import { logout } from "../../../actions/userAction";
 import "./Navigation.css";
 
 // 📌 Dropdown Component
@@ -51,6 +53,13 @@ Dropdown.propTypes = {
 // 📌 Main Admin Navigation Component
 function AdminNavigation() {
   const [isDropdownOpen, setIsDropdownOpen] = useState({});
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    dispatch(logout());
+    navigate("/login");
+  };
 
   const toggleDropdown = useCallback((category) => {
     setIsDropdownOpen((prev) => ({
@@ -71,7 +80,6 @@ function AdminNavigation() {
       category: "Transactions",
       options: [
         { name: "View All Transactions", link: "/dashboard/transactions/view-all" },
-      
       ],
     },
     {
@@ -86,13 +94,12 @@ function AdminNavigation() {
         { name: "View User Keys & Coins", link: "/dashboard/key/view-all-coin-user" },
       ],
     },
-   {
-  category: "Tips",
-  options: [
-    { name: "View Matches", link: "/dashboard/odds/view-matches" }
-  ],
-},
-
+    {
+      category: "Tips",
+      options: [
+        { name: "View Matches", link: "/dashboard/odds/view-matches" }
+      ],
+    },
   ];
 
   return (
@@ -102,7 +109,6 @@ function AdminNavigation() {
         <li>
           <Link className="menu-item" to="/dashboard">Dashboard</Link>
         </li>
-
         {/* 🔽 Dropdowns */}
         {menuItems.map((menu, index) => (
           <Dropdown
@@ -113,10 +119,16 @@ function AdminNavigation() {
             onToggle={() => toggleDropdown(menu.category)}
           />
         ))}
-
         {/* 🚪 Logout */}
-        <li>
-          <Link className="menu-item" to="/logout">Logout</Link>
+        <li
+          className="logout"
+          onClick={handleLogout}
+          aria-label="Log out of your account"
+          tabIndex={0}
+          role="button"
+          onKeyDown={e => (e.key === "Enter" || e.key === " ") && handleLogout()}
+        >
+          Logout
         </li>
       </ul>
     </nav>

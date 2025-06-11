@@ -3,32 +3,43 @@ import {
   GET_ALL_USERS_KEYS_AND_COINS_REQUEST,
   GET_ALL_USERS_KEYS_AND_COINS_SUCCESS,
   GET_ALL_USERS_KEYS_AND_COINS_FAIL,
+
   GET_USER_COINS_REQUEST,
   GET_USER_COINS_SUCCESS,
   GET_USER_COINS_FAIL,
+
   GET_USER_KEYS_REQUEST,
   GET_USER_KEYS_SUCCESS,
   GET_USER_KEYS_FAIL,
+
   REDEEM_COIN_FOR_ALL_MATCHES_REQUEST,
   REDEEM_COIN_FOR_ALL_MATCHES_SUCCESS,
   REDEEM_COIN_FOR_ALL_MATCHES_FAIL,
+
+  REDEEM_COIN_FOR_EVENTS_REQUEST,
+  REDEEM_COIN_FOR_EVENTS_SUCCESS,
+  REDEEM_COIN_FOR_EVENTS_FAIL,
+
   REDEEM_SHARED_COIN_REQUEST,
   REDEEM_SHARED_COIN_SUCCESS,
   REDEEM_SHARED_COIN_FAIL,
+
   CHECK_COIN_EXPIRY_REQUEST,
   CHECK_COIN_EXPIRY_SUCCESS,
   CHECK_COIN_EXPIRY_FAIL,
+
   CLEAR_EXPIRED_COIN_REQUEST,
   CLEAR_EXPIRED_COIN_SUCCESS,
   CLEAR_EXPIRED_COIN_FAIL,
 } from "../constants/coinConstants";
 
+// API base URL from .env
 const API_URL = process.env.REACT_APP_API_URL;
 
-// Helper function to get the token from localStorage
+// Helper: Get token from localStorage
 const getToken = () => localStorage.getItem("accessToken");
 
-// Helper function for constructing headers with Authorization token
+// Helper: Auth headers
 const getAuthConfig = () => {
   const token = getToken();
   return {
@@ -39,12 +50,13 @@ const getAuthConfig = () => {
   };
 };
 
-// Helper function for error handling
-const getErrorMessage = (error) => {
-  return error.response?.data?.message || error.message || "An error occurred";
-};
+// Helper: Clean error message
+const getErrorMessage = (error) =>
+  error.response?.data?.message || error.message || "An error occurred";
 
-// Get all users' keys and coins (admin)
+// --- Actions ---
+
+// ADMIN: Get all users' keys and coins
 export const getAllUsersKeysAndCoins = () => async (dispatch) => {
   try {
     dispatch({ type: GET_ALL_USERS_KEYS_AND_COINS_REQUEST });
@@ -53,21 +65,17 @@ export const getAllUsersKeysAndCoins = () => async (dispatch) => {
 
     const now = new Date();
 
+    // Mark recently redeemed coins
     const processedUsersData = data.usersData.map(user => {
       const updatedCoins = user.coins.map(coin => {
         const usedAtDate = coin.usedAt ? new Date(coin.usedAt) : null;
-
         return {
           ...coin,
           isRedeemedRecently:
             usedAtDate && (now.getTime() - usedAtDate.getTime() < 24 * 60 * 60 * 1000),
         };
       });
-
-      return {
-        ...user,
-        coins: updatedCoins,
-      };
+      return { ...user, coins: updatedCoins };
     });
 
     dispatch({
@@ -82,7 +90,7 @@ export const getAllUsersKeysAndCoins = () => async (dispatch) => {
   }
 };
 
-// Get user's coins
+// USER: Get own coins
 export const getUserCoins = () => async (dispatch) => {
   try {
     dispatch({ type: GET_USER_COINS_REQUEST });
@@ -101,7 +109,7 @@ export const getUserCoins = () => async (dispatch) => {
   }
 };
 
-// Get user's keys
+// USER: Get own keys
 export const getUserKeys = () => async (dispatch) => {
   try {
     dispatch({ type: GET_USER_KEYS_REQUEST });
@@ -120,14 +128,14 @@ export const getUserKeys = () => async (dispatch) => {
   }
 };
 
-// Now takes both coinId and eventId
+// USER: Redeem Coin for All Matches (event scope)
 export const redeemCoinForAllMatches = (coinId, eventId) => async (dispatch) => {
   try {
     dispatch({ type: REDEEM_COIN_FOR_ALL_MATCHES_REQUEST });
 
     // API expects { coinId, eventId }
     const { data } = await axios.post(
-      `${API_URL}/redeem/event`,
+      `${API_URL}/redeem/all`,
       { coinId, eventId },
       getAuthConfig()
     );
@@ -144,7 +152,31 @@ export const redeemCoinForAllMatches = (coinId, eventId) => async (dispatch) => 
   }
 };
 
-// Redeem shared coin
+// USER: Redeem Coin for Multiple Events (if supported)
+export const redeemCoinForEvents = (coinId, eventIds) => async (dispatch) => {
+  try {
+    dispatch({ type: REDEEM_COIN_FOR_EVENTS_REQUEST });
+
+    // API expects { coinId, eventIds: [] }
+    const { data } = await axios.post(
+      `${API_URL}/redeem/events`,
+      { coinId, eventIds },
+      getAuthConfig()
+    );
+
+    dispatch({
+      type: REDEEM_COIN_FOR_EVENTS_SUCCESS,
+      payload: data.redeemedCoin,
+    });
+  } catch (error) {
+    dispatch({
+      type: REDEEM_COIN_FOR_EVENTS_FAIL,
+      payload: getErrorMessage(error),
+    });
+  }
+};
+
+// USER: Redeem shared coin (match pass/code)
 export const redeemSharedCoin = (shareableCode) => async (dispatch) => {
   try {
     dispatch({ type: REDEEM_SHARED_COIN_REQUEST });
@@ -167,7 +199,7 @@ export const redeemSharedCoin = (shareableCode) => async (dispatch) => {
   }
 };
 
-// Check coin expiry
+// USER: Check coin expiry
 export const checkCoinExpiry = () => async (dispatch) => {
   try {
     dispatch({ type: CHECK_COIN_EXPIRY_REQUEST });
@@ -190,7 +222,7 @@ export const checkCoinExpiry = () => async (dispatch) => {
   }
 };
 
-// Clear expired coins
+// ADMIN/USER: Clear expired coins
 export const clearExpiredCoin = () => async (dispatch) => {
   try {
     dispatch({ type: CLEAR_EXPIRED_COIN_REQUEST });

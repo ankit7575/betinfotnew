@@ -5,8 +5,8 @@ import {
   updateTransactionStatus,
 } from '../../../../actions/transactionAction';
 import { Table, Dropdown, Spinner, Alert, Form } from 'react-bootstrap';
-import { Helmet } from 'react-helmet';  // Import Helmet for managing head
-import './section.css'; // Custom styles
+import { Helmet } from 'react-helmet';
+import './section.css';
 
 const Section = () => {
   const dispatch = useDispatch();
@@ -19,18 +19,19 @@ const Section = () => {
   const [transactionStatusFilter, setTransactionStatusFilter] = useState('');
   const [planFilter, setPlanFilter] = useState('');
   const [emailFilter, setEmailFilter] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     dispatch(getAllUserTransactions());
   }, [dispatch]);
 
-  const handleStatusChange = (transactionId, newStatus) => {
-    // If the status is "rejected", change it to "failed"
-    if (newStatus === 'rejected') {
-      newStatus = 'failed';
-    }
-
-    dispatch(updateTransactionStatus(transactionId, newStatus));
+  // Real-time refresh after status change
+  const handleStatusChange = async (transactionId, newStatus) => {
+    if (newStatus === 'rejected') newStatus = 'failed';
+    setUpdating(true);
+    await dispatch(updateTransactionStatus(transactionId, newStatus));
+    await dispatch(getAllUserTransactions());
+    setUpdating(false);
   };
 
   // Flattening all transactions
@@ -48,16 +49,25 @@ const Section = () => {
     const statusMatch =
       transactionStatusFilter !== '' ? tx.status.toLowerCase() === transactionStatusFilter.toLowerCase() : true;
     const planMatch =
-      planFilter !== '' ? tx.plan?.name.toLowerCase().includes(planFilter.toLowerCase()) : true;
+      planFilter !== '' ? tx.plan?.name?.toLowerCase().includes(planFilter.toLowerCase()) : true;
     const emailMatch =
-      emailFilter !== '' ? tx.userEmail.toLowerCase().includes(emailFilter.toLowerCase()) : true;
-
+      emailFilter !== '' ? tx.userEmail?.toLowerCase().includes(emailFilter.toLowerCase()) : true;
     return statusMatch && planMatch && emailMatch;
   });
 
+  // Format date helper
+  const formatDate = (dateVal) => {
+    if (!dateVal) return '-';
+    if (dateVal.$date) return new Date(dateVal.$date).toLocaleDateString();
+    try {
+      return new Date(dateVal).toLocaleDateString();
+    } catch {
+      return '-';
+    }
+  };
+
   return (
     <div className="admin-transaction-dashboard container mt-4">
-      {/* Add Helmet for dynamic title */}
       <Helmet>
         <title>Manage Transactions - Admin</title>
       </Helmet>
@@ -66,7 +76,7 @@ const Section = () => {
         <h2>📋 Manage Transactions</h2>
       </div>
 
-      {loading && (
+      {(loading || updating) && (
         <div className="text-center my-4">
           <Spinner animation="border" variant="primary" />
         </div>
@@ -103,7 +113,7 @@ const Section = () => {
         </Form.Control>
       </div>
 
-      {!loading && filteredTransactions.length > 0 ? (
+      {!loading && !updating && filteredTransactions.length > 0 ? (
         <div className="table-responsive">
           <Table bordered hover className="text-center align-middle shadow-sm table-sm table-striped">
             <thead className="table-dark">
@@ -114,6 +124,7 @@ const Section = () => {
                 <th>Plan</th>
                 <th>Price</th>
                 <th>Coins</th>
+                <th>Coin Type</th>
                 <th>Status</th>
                 <th>Date</th>
                 <th>Action</th>
@@ -126,8 +137,9 @@ const Section = () => {
                   <td>{tx.transactionId}</td>
                   <td className="text-break">{tx.userEmail}</td>
                   <td>{tx.plan?.name || '-'}</td>
-                  <td>${tx.plan?.price ?? '-'}</td>
+                  <td>{typeof tx.plan?.price === 'number' ? `$${tx.plan.price}` : '-'}</td>
                   <td>{tx.plan?.totalCoins ?? '-'}</td>
+                  <td className="text-capitalize">{tx.plan?.coinType || '-'}</td>
                   <td>
                     <span
                       className={`badge rounded-pill px-3 py-2 ${
@@ -141,14 +153,10 @@ const Section = () => {
                       {tx.status}
                     </span>
                   </td>
-                  <td>
-                    {tx.transactionDate
-                      ? new Date(tx.transactionDate).toLocaleDateString()
-                      : '-'}
-                  </td>
+                  <td>{formatDate(tx.transactionDate)}</td>
                   <td>
                     <Dropdown>
-                      <Dropdown.Toggle size="sm" variant="outline-primary">
+                      <Dropdown.Toggle size="sm" variant="outline-primary" disabled={updating}>
                         Change
                       </Dropdown.Toggle>
                       <Dropdown.Menu>
@@ -156,6 +164,7 @@ const Section = () => {
                           onClick={() =>
                             handleStatusChange(tx.transactionId, 'completed')
                           }
+                          disabled={updating}
                         >
                           ✅ Mark as Completed
                         </Dropdown.Item>
@@ -163,6 +172,7 @@ const Section = () => {
                           onClick={() =>
                             handleStatusChange(tx.transactionId, 'rejected')
                           }
+                          disabled={updating}
                         >
                           ❌ Mark as Rejected
                         </Dropdown.Item>
@@ -175,7 +185,7 @@ const Section = () => {
           </Table>
         </div>
       ) : (
-        !loading && <p className="text-center text-muted">No transactions found.</p>
+        !loading && !updating && <p className="text-center text-muted">No transactions found.</p>
       )}
     </div>
   );

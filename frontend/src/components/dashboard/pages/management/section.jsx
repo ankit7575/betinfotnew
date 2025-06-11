@@ -1,18 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllUsers, deleteUser } from "../../../../actions/userAction";
-import { Button, Table } from "react-bootstrap";
-import { Helmet } from "react-helmet";  // Import Helmet for managing head
+import {
+  getAllUsers,
+  deleteUser,
+  updateUserRole,
+} from "../../../../actions/userAction";
+import { Button, Table, Spinner, Form } from "react-bootstrap";
+import { Helmet } from "react-helmet";
 import './section.css';
+
+// These must match your backend's allowed roles
+const ROLE_OPTIONS = ["user", "admin", "superuser"];
 
 const Section = () => {
   const dispatch = useDispatch();
-  const { users = [], loading, error } = useSelector((state) => state.allUsers); // ✅ corrected
+  const { users = [], loading, error, updatingRole, updateRoleError } = useSelector(
+    (state) => state.allUsers // adjust if needed
+  );
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [phoneFilter, setPhoneFilter] = useState('');
   const [keyFilter, setKeyFilter] = useState('');
+  const [roleUpdatingId, setRoleUpdatingId] = useState(null);
 
   useEffect(() => {
     dispatch(getAllUsers());
@@ -25,6 +35,13 @@ const Section = () => {
     }
   };
 
+  const handleRoleChange = async (userId, newRole) => {
+    setRoleUpdatingId(userId);
+    await dispatch(updateUserRole(userId, { role: newRole }));
+    setRoleUpdatingId(null);
+    dispatch(getAllUsers());
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setRoleFilter('');
@@ -35,93 +52,112 @@ const Section = () => {
   const filteredUsers = users.filter((user) => {
     const emailMatch = user.email?.toLowerCase().includes(searchTerm.toLowerCase());
     const roleMatch = roleFilter ? user.role?.toLowerCase() === roleFilter.toLowerCase() : true;
-    const phoneMatch = phoneFilter ? user.phoneNumber?.includes(phoneFilter) : true;
+    const phoneMatch = phoneFilter ? user.phoneNumber?.toString().includes(phoneFilter) : true;
     const keyMatch = keyFilter ? user.keysAvailable?.toString().includes(keyFilter) : true;
     return emailMatch && roleMatch && phoneMatch && keyMatch;
   });
 
   return (
     <div className="admin-user-container">
-      {/* Add Helmet for dynamic title */}
       <Helmet>
         <title>Manage Users - Admin</title>
       </Helmet>
 
-      <h1>Manage Users</h1>
+      <h1 className="mb-4">Manage Users</h1>
 
-      <div className="filter-section">
-        <input
+      <div className="filter-section d-flex flex-wrap gap-2 mb-4 align-items-center">
+        <Form.Control
           type="text"
           placeholder="Search by email"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          style={{ minWidth: 170 }}
         />
-        <select
+        <Form.Select
           value={roleFilter}
           onChange={(e) => setRoleFilter(e.target.value)}
+          style={{ minWidth: 160 }}
         >
           <option value="">Filter by Role</option>
-          <option value="admin">Admin</option>
-          <option value="referral">Referral</option>
-          <option value="trader">Trader</option>
-        </select>
-        <input
+          {ROLE_OPTIONS.map(role => <option key={role}>{role}</option>)}
+        </Form.Select>
+        <Form.Control
           type="text"
           placeholder="Search by phone"
           value={phoneFilter}
           onChange={(e) => setPhoneFilter(e.target.value)}
+          style={{ minWidth: 150 }}
         />
-        <input
+        <Form.Control
           type="text"
           placeholder="Search by keys"
           value={keyFilter}
           onChange={(e) => setKeyFilter(e.target.value)}
+          style={{ minWidth: 120 }}
         />
-        <button onClick={clearFilters}>Clear Filters</button>
+        <Button variant="secondary" onClick={clearFilters}>Clear Filters</Button>
       </div>
 
-      {loading && <div>Loading...</div>}
-      {error && <div className="text-danger">{error}</div>}
+      {loading && <div className="my-4 text-center"><Spinner animation="border" /></div>}
+      {error && <div className="text-danger mb-3">{error}</div>}
+      {updateRoleError && <div className="text-danger mb-3">{updateRoleError}</div>}
 
       {!loading && !error && (
-        <Table striped bordered hover responsive>
-          <thead>
-            <tr>
-              <th>User ID</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>Keys Available</th>
-              <th>Role</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => (
-                <tr key={user._id}>
-                  <td>{user._id}</td>
-                  <td>{user.email}</td>
-                  <td>{user.phoneNumber}</td>
-                  <td>{user.keysAvailable}</td>
-                  <td>{user.role}</td>
-                  <td>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => handleDelete(user._id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))
-            ) : (
+        <div className="table-responsive">
+          <Table striped bordered hover responsive size="sm" className="align-middle shadow">
+            <thead className="table-dark">
               <tr>
-                <td colSpan="6">No users found</td>
+                <th>User ID</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Keys Available</th>
+                <th>Role</th>
+                <th style={{ minWidth: 120 }}>Actions</th>
               </tr>
-            )}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <tr key={user._id}>
+                    <td style={{ maxWidth: 90, fontSize: "12px" }}>{user._id}</td>
+                    <td>{user.email}</td>
+                    <td>{user.phoneNumber || <span className="text-muted">-</span>}</td>
+                    <td>{user.keysAvailable ?? <span className="text-muted">-</span>}</td>
+                    <td>
+                      <Form.Select
+                        value={user.role}
+                        disabled={roleUpdatingId === user._id}
+                        onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                        style={{ minWidth: 110 }}
+                      >
+                        {ROLE_OPTIONS.map((role) => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </Form.Select>
+                      {roleUpdatingId === user._id && (
+                        <Spinner size="sm" animation="border" className="ms-2" />
+                      )}
+                    </td>
+                    <td>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDelete(user._id)}
+                        disabled={loading}
+                      >
+                        Delete
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="6" className="text-center text-muted">No users found</td>
+                </tr>
+              )}
+            </tbody>
+          </Table>
+        </div>
       )}
     </div>
   );

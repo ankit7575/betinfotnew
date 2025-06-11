@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getAllPlans, selectPlan } from '../../../actions/planAction'; // Import the getAllPlans and selectPlan actions
+import { getAllPlans, selectPlan } from '../../../actions/planAction';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './Plans.css';
 import { useNavigate } from 'react-router-dom';
@@ -9,48 +9,88 @@ const Plans = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
+  // Plan filter state: 'all', 'gold', 'diamond'
+  const [filter, setFilter] = useState('all');
+
   // Access plans from Redux store
-  const planList = useSelector((state) => state.planList);
-  const { plans, loading, error } = planList || {};
+  const { plans, loading, error } = useSelector((state) => state.planList || {});
 
   useEffect(() => {
-    dispatch(getAllPlans()); // Fetch all plans when the component mounts
+    dispatch(getAllPlans());
   }, [dispatch]);
 
   const handlePay = (plan) => {
-    // Dispatch action to select the plan and pass the plan ID
     dispatch(selectPlan({ planId: plan._id }));
-
-    // Navigate to the transaction page with the selected plan data
     navigate('/transaction', { state: { plan } });
   };
 
-  // Loading, error or no plans available handling
-  if (loading) return <div>Loading plans...</div>;
-  if (error) return <div>Error: {error}</div>;
-  if (!plans || plans.length === 0) return <div>No plans available.</div>;
+  // Filter logic
+  const getFilteredPlans = () => {
+    if (!plans) return [];
+    if (filter === 'all') return plans;
+    return plans.filter((plan) => plan.coinType === filter);
+  };
+  const filteredPlans = getFilteredPlans();
+
+  if (loading) return <div className="text-center py-4">Loading plans...</div>;
+  if (error) return <div className="alert alert-danger text-center">Error: {error}</div>;
+  if (!plans || plans.length === 0)
+    return <div className="alert alert-warning text-center">No plans available.</div>;
 
   return (
     <div className="container mt-5">
+      <div className="mb-4 text-center">
+        <button
+          className={`btn btn-warning mx-2 ${filter === 'gold' ? 'active' : ''}`}
+          onClick={() => setFilter('gold')}
+        >
+          Show Gold Plans
+        </button>
+        <button
+          className={`btn btn-info mx-2 ${filter === 'diamond' ? 'active' : ''}`}
+          onClick={() => setFilter('diamond')}
+        >
+          Show Diamond Plans
+        </button>
+        <button
+          className={`btn btn-secondary mx-2 ${filter === 'all' ? 'active' : ''}`}
+          onClick={() => setFilter('all')}
+        >
+          Show All
+        </button>
+      </div>
       <div className="row justify-content-center">
-        {/* Loop through plans to display each plan */}
-        {plans.map((plan) => (
-          <div key={plan._id} className="col-lg-3 col-md-4 col-sm-6 mb-4">
-            <div className="card plan-card shadow-lg">
-              <div className="card-body">
-                <h3 className="card-title text-center">{plan.price} USDT</h3>
-                <p className="plan-name text-center">{plan.name}</p>
-                <p><strong>Description:</strong> {plan.description}</p>
-                <p><strong>Total Coins:</strong> {plan.totalCoins}</p>
-                
-                {/* Pay Now button which dispatches selectPlan */}
-                <button className="btn btn-custom" onClick={() => handlePay(plan)}>
-                  Pay Now
-                </button>
+        {filteredPlans.length > 0 ? (
+          filteredPlans.map((plan) => (
+            <div key={plan._id} className="col-lg-3 col-md-4 col-sm-6 mb-4">
+              <div className="card plan-card shadow-lg h-100">
+                <div className="card-body d-flex flex-column justify-content-between">
+                  <h3 className="card-title text-center mb-3">{plan.price} USDT</h3>
+                  <h5 className="plan-name text-center mb-2">{plan.name}</h5>
+                  <p>
+                    <strong>Description:</strong>
+                    <br />
+                    <span>{plan.description}</span>
+                  </p>
+                  <p>
+                    <strong>Coin Type:</strong>{' '}
+                    <span className="text-capitalize">{plan.coinType}</span>
+                  </p>
+                  <p>
+                    <strong>Total Coins:</strong> {plan.totalCoins}
+                  </p>
+                  <button className="btn btn-custom mt-auto w-100" onClick={() => handlePay(plan)}>
+                    Pay Now
+                  </button>
+                </div>
               </div>
             </div>
+          ))
+        ) : (
+          <div className="alert alert-warning text-center w-100">
+            No plans available for this filter.
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
