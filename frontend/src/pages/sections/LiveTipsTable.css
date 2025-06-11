@@ -1,0 +1,92 @@
+.live-tips-table-wrap {
+  background: #181b22;
+  border-radius: 8px;
+  padding: 0;
+  margin: 0;
+}
+
+.live-tips-header-row {
+  color: #0ff;
+  font-size: 1.07rem;
+  font-weight: 600;
+  padding: 0.15rem 0.7rem;
+  background: #191b1e;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-left: 4px;
+  background: #19ff19;
+  border-radius: 50%;
+  border: 1px solid #fff2;
+  box-shadow: 0 0 4px #1f4;
+  animation: borderPulse 1.5s infinite;
+}
+
+.live-tips-scroll {
+  max-height: 215px;
+  overflow-y: auto;
+}
+.latest-odds h4 {
+  color: white;
+}
+.form-label{
+  color: white;
+}
+.history-odds h4{
+  color: white;
+}
+.live-tips-table {
+  margin: 0;
+  border-collapse: collapse;
+  background: none;
+}
+.live-tips-table th,
+.live-tips-table td {
+  color: #0d0c0c;
+  border-color: #444;
+  font-size: 1.03rem;
+  padding: 0.17rem 0.2rem;
+  text-align: center;
+}
+.live-tips-table th {
+  background: #232325;
+  color: #0ff;
+  font-weight: 600;
+  font-size: 0.96rem;
+}
+.Runner {
+  font-weight: 600;
+  color: #fff;
+  text-align: left;
+  padding-left: 0.3rem;
+  white-space: nowrap;
+}
+.highlight {
+  background: #233f21 !important;
+  color: #67ff73 !important;
+  font-weight: 700;
+  transition: background 0.22s;
+}
+.text-center {
+  text-align: center;
+  color: #000000;
+  font-size: 0.91rem;
+  padding: 0.19rem 0;
+}
+.blackcolor {
+  color: #000 !important;
+}
+@keyframes borderPulse {
+  0% { border-color: #0ff; box-shadow: 0 0 2px #0ff2; }
+  50% { border-color: #ff0; box-shadow: 0 0 4px #ff02; }
+  100% { border-color: #0ff; box-shadow: 0 0 2px #0ff2; }
+}
+

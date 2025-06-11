@@ -1,0 +1,217 @@
+.fancy-card-scoreboard.mini {
+  background: #14161e;
+  color: #fff;
+  border-radius: 13px;
+  box-shadow: 0 2px 14px 0 #0004;
+  padding: 10px 8px 8px 10px;
+
+  margin: 8px auto;
+  font-family: 'Montserrat', 'Segoe UI', Arial, sans-serif;
+  border-left: 5px solid #3ef7c5;
+}
+
+.fancy-scoreboard-header.mini {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+  letter-spacing: 0.04em;
+}
+
+.fancy-live-dot, .fancy-offline-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  border: 2px solid #072d24;
+  margin-right: 2px;
+}
+.fancy-live-dot { background: #14ff79; box-shadow: 0 0 5px #00ff6e99;}
+.fancy-offline-dot { background: #ccc; box-shadow: 0 0 3px #222;}
+
+.fancy-live-text.mini {
+  font-size: 0.91rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.06em;
+  margin-right: 4px;
+}
+
+.fancy-score-title.mini {
+  text-align: left;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #31ffe5;
+  margin-bottom: 4px;
+  text-shadow: none;
+}
+
+.fancy-score-teams.mini {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 1.1rem;
+  margin-bottom: 2px;
+}
+
+.fancy-teamname {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #b3f8fc;
+  letter-spacing: 0.01em;
+  min-width: 50px;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fancy-score {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.fancy-divider {
+  font-size: 1.1rem;
+  margin: 0 2px;
+  color: #fce87b;
+}
+
+.fancy-overs {
+  font-size: 0.92rem;
+  color: #ffe895;
+  font-weight: 600;
+  margin-left: 6px;
+}
+
+.fancy-balls-row.mini {
+  display: flex;
+  gap: 5px;
+  margin-top: 2px;
+  justify-content: flex-start;
+  align-items: center;
+  min-height: 36px;
+}
+
+.fancy-scoreboard-ball {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 25px;
+  height: 25px;
+  font-size: 1.02rem;
+  font-weight: 800;
+  background: #232943;
+  border-radius: 50%;
+  border: 2px solid #1ad1a3;
+  box-shadow: 0 1px 5px #22ffc36b;
+  transition: transform 0.09s;
+  margin: 0;
+  padding: 0;
+}
+.fancy-scoreboard-ball.wicket {
+  background: #ff3977;
+  color: #fff;
+  border-color: #ee2255;
+  box-shadow: 0 0 5px #ff2f5485;
+  transform: scale(1.1);
+}
+.fancy-scoreboard-ball.four {
+  background: #37ffdb;
+  color: #183332;
+  border-color: #13e6b7;
+  box-shadow: 0 0 6px #21ffd985;
+}
+.fancy-scoreboard-ball.six {
+  background: #31c8fd;
+  color: #11254a;
+  border-color: #17a7c7;
+  box-shadow: 0 0 6px #36e0ff73;
+}
+.fancy-scoreboard-ball.extra {
+  background: #ffe066;
+  color: #523b00;
+  border-color: #d1ac1a;
+  box-shadow: 0 0 4px #ffe06677;
+}
+.fancy-scoreboard-ball.dot {
+  background: #e3e8f3;
+  color: #191c22;
+  border-color: #b9c3d8;
+  opacity: 0.93;
+}
+.fancy-noballs {
+  font-size: 1.1rem;
+  opacity: 0.5;
+}
+
+@media (max-width: 500px) {
+  .fancy-card-scoreboard.mini { padding: 6px 2px 4px 6px; border-radius: 7px; }
+  .fancy-score-title.mini { font-size: 0.9rem; }
+  .fancy-teamname, .fancy-score, .fancy-divider, .fancy-overs { font-size: 0.85rem;}
+  .fancy-balls-row.mini { min-height: 24px; }
+  .fancy-scoreboard-ball { width: 17px; height: 17px; font-size: 0.77rem; }
+}
+
+.fancy-card-scoreboard.tennis {
+padding: 10px;
+  /* rest as cricket mini */
+}
+
+.fancy-score-teams.tennis {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.tennis-sets {
+  display: flex;
+  gap: 5px;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.tennis-set-score {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #222e;
+  margin: 0 1.5px;
+  min-width: 26px;
+  text-align: center;
+}
+
+.tennis-set-score.current-set {
+  background: #0ff;
+  color: #191c22;
+  font-weight: 900;
+}
+
+.tennis-game-score {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-left: 10px;
+  color: #ffd800;
+}
+
+.tennis-current-set-label {
+  text-align: right;
+  font-size: 1.05rem;
+  color: #96ffff;
+  margin-top: 3px;
+}
+.tennis-tb {
+  font-size: 0.96em;
+  background: #33f5f5;
+  color: #333;
+  border-radius: 5px;
+  padding: 2px 7px;
+  margin-left: 8px;
+}
+.tennis-serve-dot {
+  color: #ffd800;
+  font-size: 1.1em;
+  margin-left: 4px;
+  vertical-align: middle;
+}
