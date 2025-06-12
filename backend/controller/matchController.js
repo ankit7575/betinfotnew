@@ -26,10 +26,10 @@ const getNetProfitInput = (match, userId) => {
     selection_ids.push(parseInt(runner.runnerId ? runner.runnerId : runner.selectionId));
   });
   // Get user's last investment time
-  let openingBalance = 0;
+  let openingbalance = 0;
   if (userId) {
     const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
-    openingBalance = investmentEntry?.amount || 0;
+    openingbalance = investmentEntry?.amount || 0;
     const userOwnOdds = match?.userOwnOdds?.find(o => o.userId === userId);
     userOwnOdds?.runners?.map((runnerOdd) =>
       runnerOdd.layingHistory?.map((tipHistory) => {
@@ -44,7 +44,7 @@ const getNetProfitInput = (match, userId) => {
   }
   match?.adminBetfairOdds?.map((runnerOdd) =>
     runnerOdd.layingHistory?.map((tipHistory) => {
-      const amount = userId ? (parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0) * openingBalance)/ match?.openingbalance || 200000  : parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0);
+      const amount = userId ? (parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0) * openingbalance)/ match?.openingbalance || 200000  : parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0);
       history.push({
         selection_id : parseInt(runnerOdd.selectionId),
         side : tipHistory.odds?.back ? "Back" : tipHistory.odds?.lay ? "Lay" : "",
@@ -546,16 +546,16 @@ const getBetfairOddsForRunner = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Get user's last investment time
-    let openingBalance = match?.openingBalance;
+    let openingbalance = match?.openingbalance;
     if (userId) {
       const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
-      openingBalance = investmentEntry?.amount || 0;
+      openingbalance = investmentEntry?.amount || 0;
     }
 
     // Enrich runners: always set team name
     const runnerData = await Promise.all(marketData.runners.map(async (runner) => {
-      const backAmount = await getAmount({ side: "Back", odd: runner?.ex?.availableToBack[0]?.price, investmentLimit: openingBalance });
-      const layAmount = await getAmount({ side: "Lay", odd: runner?.ex?.availableToLay[0]?.price, investmentLimit: openingBalance });
+      const backAmount = await getAmount({ side: "Back", odd: runner?.ex?.availableToBack[0]?.price, investmentLimit: openingbalance });
+      const layAmount = await getAmount({ side: "Lay", odd: runner?.ex?.availableToLay[0]?.price, investmentLimit: openingbalance });
       const backNet = await getNetProfit({match: match, tip: {
         selection_id : parseInt(runner.selectionId),
         side : "Back",
@@ -663,7 +663,7 @@ const getMatchById = catchAsyncErrors(async (req, res, next) => {
       betfairOdds: match.betfairOdds,
       scoreData: match.scoreData,
       netProfit: data ?? [],
-      openingBalance: !userId ? match?.openingBalance : 0,
+      openingbalance: !userId ? match?.openingbalance : 0,
     };
 
     // ✅ Store match in temp memory
