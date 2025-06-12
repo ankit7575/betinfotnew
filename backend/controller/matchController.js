@@ -1026,11 +1026,11 @@ const addUserBetfairOdds = catchAsyncErrors(async (req, res, next) => {
   } else {
     const runner = userOwnOdds?.runners?.find(o => Number(o.selectionId) === Number(selectionId))
     if (!runner) {
-      userOwnOdds.runners = [{
+      userOwnOdds.runners.push({
         selectionId: Number(selectionId),
         runnerName: runnerName,
         layingHistory: [layingEntry],
-      }];
+      });
     } else {
       runner.layingHistory.push(layingEntry);
     }
