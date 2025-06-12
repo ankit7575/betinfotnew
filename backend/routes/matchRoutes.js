@@ -20,6 +20,7 @@ updateUserOddsWithHistory,
 getTennisMatches,
 updateMatchSelectedStatus,
 updateMatchAdminStatus,
+addUserBetfairOdds,
 } = require('../controller/matchController');
 
 
@@ -73,6 +74,7 @@ router.get('/match/:eventId/runner/:selectionId/laying/history', viewAdminLaying
 
 
 router.post('/admin/match/:eventId/runner/:selectionId/odds',isAuthenticatedUser, authorizeRoles("admin"), addAdminBetfairOdds);
+router.post('/user/:userId/match/:eventId/runner/:selectionId/odds',isAuthenticatedUser, addUserBetfairOdds);
 router.get('/match/:eventId/my-odds', isAuthenticatedUser, getUserMatchOddsAndInvestment);
 router.post('/match/:eventId/my-odds', isAuthenticatedUser, updateUserOddsWithHistory); 
 

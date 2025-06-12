@@ -1026,6 +1026,56 @@ const addAdminBetfairOdds = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
+// Add or update user Betfair odds
+const addUserBetfairOdds = catchAsyncErrors(async (req, res, next) => {
+  const { userId, eventId, selectionId } = req.params;
+  const { odds, Ammount } = req.body;
+
+  const match = await Match.findOne({ eventId });
+  if (!match) return res.status(404).json({ message: "Match not found" });
+
+  // Find runner for odds update
+  const matchRunner = match.matchRunners.find(r => r.runnerId === String(selectionId));
+  const runnerName = matchRunner ? matchRunner.runnerName : "Unknown Runner";
+
+  const layingEntry = {
+    odds,
+    Ammount,
+    timestamp: new Date(),
+  };
+  const userOwnOdds = match.userOwnOdds.find(o => o.userId === userId);
+  if (!userOwnOdds) {
+    match.userOwnOdds.push({
+      userId: userId,
+      runners: [{
+        selectionId: Number(selectionId),
+        runnerName: runnerName,
+        layingHistory: [layingEntry],
+      }],
+    });
+  } else {
+    const runner = userOwnOdds?.runners?.find(o => Number(o.selectionId) === Number(selectionId))
+    if (!runner) {
+      userOwnOdds.runners = [{
+        selectionId: Number(selectionId),
+        runnerName: runnerName,
+        layingHistory: [layingEntry],
+      }];
+    } else {
+      runner.layingHistory.push(layingEntry);
+    }
+  }
+
+  await match.save();
+
+  res.status(200).json({
+    success: true,
+    message: "User odds added/updated successfully.",
+    updatedSelectionId: selectionId,
+    userOwnOdds: userOwnOdds,
+  });
+});
+
 
 // Controller: Get odds + investment
 // const getUserMatchOddsAndInvestment = catchAsyncErrors(async (req, res) => {
@@ -1556,11 +1606,12 @@ module.exports = {
   getMatchDetailsWithTip,
   manageUserInvestment,
   autoCalculateAdminBetfairOddsForRunner,
-getSoccerMatches,
+  getSoccerMatches,
   addAdminBetfairOdds,
   getUserMatchOddsAndInvestment,
   adminAddInvestment,
-getTennisMatches,
-updateMatchSelectedStatus,
-updateMatchAdminStatus,
+  getTennisMatches,
+  updateMatchSelectedStatus,
+  updateMatchAdminStatus,
+  addUserBetfairOdds,
 };
