@@ -486,6 +486,7 @@ const getSoccerMatches = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
+
 // Make sure getAmount is defined above this controller!
 const getBetfairOddsForRunner = catchAsyncErrors(async (req, res, next) => {
   let { eventId, userId } = req.params;
