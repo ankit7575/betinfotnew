@@ -546,7 +546,7 @@ const getBetfairOddsForRunner = catchAsyncErrors(async (req, res, next) => {
     }
 
     // Get user's last investment time
-    let openingBalance = 0;
+    let openingBalance = match?.openingBalance;
     if (userId) {
       const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
       openingBalance = investmentEntry?.amount || 0;
@@ -663,6 +663,7 @@ const getMatchById = catchAsyncErrors(async (req, res, next) => {
       betfairOdds: match.betfairOdds,
       scoreData: match.scoreData,
       netProfit: data ?? [],
+      openingBalance: !userId ? match?.openingBalance : 0,
     };
 
     // ✅ Store match in temp memory
@@ -1251,6 +1252,32 @@ const userAddInvestment = catchAsyncErrors(async (req, res) => {
   });
 });
 
+// Add admin investment
+const adminAddInvestment = catchAsyncErrors(async (req, res) => {
+  const { eventId } = req.params;
+  const { amount } = req.body;
+
+  if (!amount || isNaN(amount)) {
+    return res.status(400).json({ success: false, message: "A valid amount is required." });
+  }
+
+  const match = await Match.findOne({ eventId });
+  if (!match) {
+    return res.status(404).json({ success: false, message: "Match not found." });
+  }
+
+  match.openingbalance = amount || 200000;
+
+  await match.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Admin investment added.",
+    eventId,
+    openingbalance: amount,
+  });
+});
+
 
 // Manage User Investment
 const manageUserInvestment = catchAsyncErrors(async (req, res, next) => {
@@ -1532,7 +1559,7 @@ module.exports = {
 getSoccerMatches,
   addAdminBetfairOdds,
   getUserMatchOddsAndInvestment,
-  userAddInvestment,
+  adminAddInvestment,
 getTennisMatches,
 updateMatchSelectedStatus,
 updateMatchAdminStatus,

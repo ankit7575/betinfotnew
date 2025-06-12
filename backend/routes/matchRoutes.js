@@ -16,6 +16,7 @@ updateUserOddsWithHistory,
   addAdminBetfairOdds,
   getUserMatchOddsAndInvestment,
   userAddInvestment,
+  adminAddInvestment,
 getTennisMatches,
 updateMatchSelectedStatus,
 updateMatchAdminStatus,
@@ -76,6 +77,7 @@ router.get('/match/:eventId/my-odds', isAuthenticatedUser, getUserMatchOddsAndIn
 router.post('/match/:eventId/my-odds', isAuthenticatedUser, updateUserOddsWithHistory); 
 
 router.post('/match/:eventId/user/investment',isAuthenticatedUser, userAddInvestment);
+router.post('/match/:eventId/admin/investment',isAuthenticatedUser, authorizeRoles("admin"), adminAddInvestment);
 
 
 module.exports = router;
