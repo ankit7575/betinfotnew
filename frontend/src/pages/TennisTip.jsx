@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Spinner, Alert, Button, Modal } from 'react-bootstrap';
-import socket from '../socket';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './ViewTip.css';
 
@@ -56,8 +55,8 @@ const TennisTip = () => {
     loading,
     userOddsAndInvestment,
     userLoading,
-    scoreboard,
-    match,
+    // scoreboard,
+    // match,
   } = useSelector((state) => state.match || {});
   const { user, loading: userLoadingState } = useSelector((state) => state.user || {});
   const isAdminOrSuperuser = user?.role === 'admin' || user?.role === 'superuser';

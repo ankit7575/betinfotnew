@@ -18,7 +18,6 @@ const LiveTipsTable = ({ eventId }) => {
   const dispatch = useDispatch();
   const { match, loading, userOddsAndInvestment } = useSelector((state) => state.match || {});
   const [runnerOdds, setRunnerOdds] = useState([]);
-  const [latestTip, setLatestTip] = useState([]);
 
   useEffect(() => {
     if (eventId && userOddsAndInvestment?.userId) dispatch(getMatchById(eventId, userOddsAndInvestment?.userId));
@@ -97,7 +96,6 @@ const LiveTipsTable = ({ eventId }) => {
         userOpeningBalance={userOddsAndInvestment?.openingbalance || 0}
         userId={userOddsAndInvestment?.userId}
         eventId={eventId}
-        setLatestTip={setLatestTip}
         socket={socket}
       />
     </div>

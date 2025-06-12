@@ -14,7 +14,7 @@ const ROLE_OPTIONS = ["user", "admin", "superuser"];
 
 const Section = () => {
   const dispatch = useDispatch();
-  const { users = [], loading, error, updatingRole, updateRoleError } = useSelector(
+  const { users = [], loading, error, updateRoleError } = useSelector(
     (state) => state.allUsers // adjust if needed
   );
 

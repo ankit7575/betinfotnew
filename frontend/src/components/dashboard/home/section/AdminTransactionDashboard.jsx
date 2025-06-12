@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getAllUserTransactions,
-  updateTransactionStatus,
+  // updateTransactionStatus,
 } from '../../../../actions/transactionAction';
-import { Table, Dropdown, Spinner, Alert, Form, Card, Row, Col, Badge } from 'react-bootstrap';
+import { Table, Spinner, Alert, Card, Row, Col } from 'react-bootstrap';
 import { Helmet } from 'react-helmet';
 import './AdminTransactionDashboard.css';
 
@@ -18,10 +18,10 @@ const AdminTransactionDashboard = () => {
   const error = transactionData.error;
 
   // Filters
-  const [transactionStatusFilter, setTransactionStatusFilter] = useState('');
-  const [planFilter, setPlanFilter] = useState('');
-  const [emailFilter, setEmailFilter] = useState('');
-  const [updating, setUpdating] = useState(false);
+  // const [transactionStatusFilter, setTransactionStatusFilter] = useState('');
+  // const [planFilter, setPlanFilter] = useState('');
+  // const [emailFilter, setEmailFilter] = useState('');
+  // const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     dispatch(getAllUserTransactions());
@@ -82,7 +82,7 @@ const AdminTransactionDashboard = () => {
         </h2>
       </div>
 
-      {(loading || updating) && (
+      {(loading) && (
         <div className="text-center my-4">
           <Spinner animation="border" variant="primary" />
         </div>

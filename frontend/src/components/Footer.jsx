@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { FaFacebookF, FaInstagram, FaYoutube, FaLinkedinIn, FaEnvelope, FaPhone, FaMapMarkerAlt } from "react-icons/fa";
+import { FaFacebookF, FaInstagram, FaYoutube, FaLinkedinIn, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
 import Newsletter from "./ContactForm"; // Import the ContactForm component
 
 const Footer = () => {
