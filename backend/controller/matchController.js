@@ -535,7 +535,7 @@ const getBetfairOddsForRunner = catchAsyncErrors(async (req, res, next) => {
     if (userId) {
       const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
       openingbalance = investmentEntry?.amount || 0;
-      runners = match?.userOwnOdds.find(u => u.userId === userId);
+      runners = match?.userOwnOdds.find(u => u.userId === userId)?.runners;
     }
 
     // Enrich runners: always set team name
@@ -638,7 +638,7 @@ const getMatchById = catchAsyncErrors(async (req, res, next) => {
 
     const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
     const amount = userId ? investmentEntry?.amount : match?.openingbalance;
-    const runners = userId ? match?.userOwnOdds.find(u => u.userId === userId) : match?.addAdminBetfairOdds;
+    const runners = userId ? match?.userOwnOdds.find(u => u.userId === userId)?.runners : match?.adminBetfairOdds;
     const data = await getNetProfit({runners: runners, matchRunners: match?.matchRunners, amount: amount});
 
     // Optional: You can filter or transform the data as needed
