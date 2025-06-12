@@ -1097,28 +1097,59 @@ const getUserMatchOddsAndInvestment = catchAsyncErrors(async (req, res) => {
 
   const now = new Date();
 
-  // Must have a coin for THIS eventId
-  const hasValidCoin = user.keys.some(key =>
-    key.coin.some(coin =>
-      coin.usedForEventId === eventId &&
-      coin.usedAt &&
-      new Date(coin.expiresAt) > now
-    )
-  );
+  // === ADMIN/SUPERUSER BYPASS ===
+  const isAdminOrSuperuser = user.role === "admin" || user.role === "superuser";
 
-  if (!hasValidCoin)
-    return res.status(403).json({ success: false, message: "Access denied: Please redeem a valid coin for this match event." });
+  // --- NEW LOGIC: Valid if user has active diamond coin OR gold coin for this event ---
+  let hasValidAccess = false;
+
+  if (isAdminOrSuperuser) {
+    hasValidAccess = true;
+  } else {
+    // 1. Diamond coin check (any event, if active)
+    const hasDiamond = user.keys.some(key =>
+      key.coin.some(coin =>
+        (coin.type === "diamond" || coin.coinType === "diamond") &&
+        coin.usedAt &&
+        coin.expiresAt &&
+        new Date(coin.expiresAt) > now
+      )
+    );
+    // 2. Gold coin check (must be for this event)
+    const hasGoldForThisEvent = user.keys.some(key =>
+      key.coin.some(coin =>
+        (coin.type === "gold" || !coin.type || coin.coinType === "gold") &&
+        coin.usedForEventId === eventId &&
+        coin.usedAt &&
+        coin.expiresAt &&
+        new Date(coin.expiresAt) > now
+      )
+    );
+    hasValidAccess = hasDiamond || hasGoldForThisEvent;
+  }
+
+  if (!hasValidAccess)
+    return res.status(403).json({
+      success: false,
+      message:
+        "Access denied: Please redeem a gold coin for this match, or a diamond coin for all matches.",
+    });
 
   const match = await Match.findOne({ eventId });
-  if (!match) return res.status(404).json({ success: false, message: "Match not found." });
+  if (!match)
+    return res
+      .status(404)
+      .json({ success: false, message: "Match not found." });
 
   // Get user's last investment time
   const investmentEntry = match.userOpeningbalanceHistory
-    .filter(entry => entry.userId.toString() === userId)
+    .filter((entry) => entry.userId.toString() === userId)
     .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 
   if (!investmentEntry)
-    return res.status(404).json({ success: false, message: "User investment not found." });
+    return res
+      .status(404)
+      .json({ success: false, message: "User investment not found." });
 
   const userOpeningBalance = investmentEntry.amount;
   const adminOpeningBalance = match.openingbalance || 200000;
@@ -1126,12 +1157,12 @@ const getUserMatchOddsAndInvestment = catchAsyncErrors(async (req, res) => {
 
   // Find all odds generated for this user
   const allUserOdds = (match.userBetfairOdds || []).filter(
-    o => o.userId === userId
+    (o) => o.userId === userId
   );
 
   // Only show "current" odds that were created AT OR AFTER their investment time
   const currentSessionOdds = allUserOdds.filter(
-    o => new Date(o.createdAt) >= investmentTime
+    (o) => new Date(o.createdAt) >= investmentTime
   );
 
   // Optionally, filter history in each odds object to only post-investment entries
@@ -1150,6 +1181,8 @@ const getUserMatchOddsAndInvestment = catchAsyncErrors(async (req, res) => {
 
   res.status(200).json(responsePayload);
 });
+
+
 
 // Add user investment
 const userAddInvestment = catchAsyncErrors(async (req, res) => {

@@ -2,9 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getMatchById, addAdminBetfairOdds, getBetfairOddsForRunner } from '../../../../actions/matchaction';
+import {
+  getMatchById,
+  addAdminBetfairOdds,
+  getBetfairOddsForRunner,
+  userAddInvestment, // ⬅️ import this!
+} from '../../../../actions/matchaction';
 import Layout from "../../layouts/layout";
-import { Spinner, Button, Form, Row, Col } from 'react-bootstrap';
+import { Spinner, Button, Form, Row, Col, Alert } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './Adddata.css';
 import BetfairMarketTable from '../../../../pages/sections/BetfairMarketTable';
@@ -26,6 +31,12 @@ const Adddata = () => {
     odd: '',
     amount: '',
   });
+
+  // 👇 State for investment
+  const [investmentAmount, setInvestmentAmount] = useState('');
+  const [investmentLoading, setInvestmentLoading] = useState(false);
+  const [investmentSuccess, setInvestmentSuccess] = useState('');
+  const [investmentError, setInvestmentError] = useState('');
 
   useEffect(() => {
     if (eventId) {
@@ -59,7 +70,7 @@ const Adddata = () => {
     }));
   };
 
-  const handleSubmit = async ({tip}) => {
+  const handleSubmit = async ({ tip }) => {
     setIsSubmitting(true);
     try {
       if (tip?.runner) {
@@ -92,12 +103,30 @@ const Adddata = () => {
         side: '',
         odd: '',
         amount: '',
-      })
+      });
       await dispatch(getMatchById(eventId));
     } catch (error) {
       console.error("Error submitting all runners:", error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // 👇 Handle investment submit
+  const handleInvestmentSubmit = async (e) => {
+    e.preventDefault();
+    setInvestmentLoading(true);
+    setInvestmentSuccess('');
+    setInvestmentError('');
+    try {
+      await dispatch(userAddInvestment(eventId, Number(investmentAmount)));
+      setInvestmentSuccess('Investment added successfully!');
+      setInvestmentAmount('');
+      await dispatch(getMatchById(eventId));
+    } catch (error) {
+      setInvestmentError('Failed to add investment amount.');
+    } finally {
+      setInvestmentLoading(false);
     }
   };
 
@@ -110,14 +139,15 @@ const Adddata = () => {
   }
 
   const handleOddsClick = async (tip) => {
-    handleSubmit({tip: tip});
-  }
+    handleSubmit({ tip: tip });
+  };
 
   const getRunnerName = (selectionId, fallback, index) => {
     const matchData = match?.matchRunners?.find(r => r.selectionId === selectionId);
     return matchData?.runnerName || fallback || `Runner ${index + 1}`;
   };
   const latest = match?.adminBetfairOdds?.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] ?? null;
+
   return (
     <Layout userRole="admin">
       <Helmet>
@@ -127,6 +157,41 @@ const Adddata = () => {
       <div className="container mt-4">
         <h3 className="mb-3">{match?.eventName}</h3>
 
+        {/* ======== INVESTMENT AMOUNT SECTION (admin) ======== */}
+        <div className="mb-4 p-3 border rounded bg-light">
+          <h5>Add Investment Amount</h5>
+          <Form onSubmit={handleInvestmentSubmit} className="row align-items-end">
+            <div className="col-md-3">
+              <Form.Group controlId="investmentAmount">
+                <Form.Label>Amount</Form.Label>
+                <Form.Control
+                  type="number"
+                  name="investmentAmount"
+                  value={investmentAmount}
+                  onChange={(e) => setInvestmentAmount(e.target.value)}
+                  placeholder="Enter investment amount"
+                  min="1"
+                  required
+                />
+              </Form.Group>
+            </div>
+            <div className="col-md-2">
+              <Button
+                variant="primary"
+                type="submit"
+                disabled={investmentLoading || !investmentAmount}
+              >
+                {investmentLoading ? 'Saving...' : 'Add Investment'}
+              </Button>
+            </div>
+            <div className="col-md-4">
+              {investmentSuccess && <Alert variant="success" className="py-1 px-2">{investmentSuccess}</Alert>}
+              {investmentError && <Alert variant="danger" className="py-1 px-2">{investmentError}</Alert>}
+            </div>
+          </Form>
+        </div>
+
+        {/* ======== ODDS ENTRY SECTION ======== */}
         <div>
           <BetfairMarketTable
             matchData={{
@@ -186,10 +251,13 @@ const Adddata = () => {
                 </Form.Group>
               </Col>
             </Row>
-            <Button className='w-32' variant="primary" type="submit">{isSubmitting ? 'Submitting....' : 'Submit'}</Button>
+            <Button className='w-32' variant="primary" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Submitting....' : 'Submit'}
+            </Button>
           </Form>
         </div>
 
+        {/* ======== LATEST ODDS ======== */}
         <div className="latest-odds mt-4">
           <h4>Latest Tips</h4>
           <table className="table table-bordered table-striped">
@@ -218,6 +286,7 @@ const Adddata = () => {
           </table>
         </div>
 
+        {/* ======== HISTORY ODDS ======== */}
         <div className="history-odds mt-4">
           <h4>Odds Tips</h4>
           <table className="table table-bordered table-striped">

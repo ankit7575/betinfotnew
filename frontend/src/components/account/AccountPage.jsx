@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../actions/userAction";
 import { useNavigate } from "react-router-dom";
@@ -24,9 +24,15 @@ const AccountPage = () => {
     setSidebarVisible(false); // close mobile sidebar
   };
 
+ useEffect(() => {
+    if (!loading && !user) {
+      navigate("/login");
+    }
+  }, [user, loading, navigate]);
+
   const handleLogout = () => {
     dispatch(logout());
-    navigate("/login");
+    setSidebarVisible(false);
   };
 
   const sections = [

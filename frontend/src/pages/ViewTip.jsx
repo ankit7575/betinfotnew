@@ -43,15 +43,13 @@ const ViewTip = () => {
   const [coinMessage, setCoinMessage] = useState('');
   const [redeemingCoin, setRedeemingCoin] = useState(false);
 
-  // Auto-refresh page only once per event
+  // Time logic for expiry checks
+  const [now, setNow] = useState(new Date());
   useEffect(() => {
-    if (!eventId) return;
-    const reloadKey = 'viewtipAutoReloaded_' + eventId;
-    if (!sessionStorage.getItem(reloadKey)) {
-      sessionStorage.setItem(reloadKey, 'true');
-      window.location.reload();
-    }
-  }, [eventId]);
+    const timer = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Redux State Selectors
   const {
     loading,
@@ -61,6 +59,7 @@ const ViewTip = () => {
     match,
   } = useSelector((state) => state.match || {});
   const { user, loading: userLoadingState } = useSelector((state) => state.user || {});
+  const isAdminOrSuperuser = user?.role === 'admin' || user?.role === 'superuser';
 
   // Fallback scoreboard
   const fallbackScoreboard = {
@@ -79,26 +78,7 @@ const ViewTip = () => {
     status: 'Match has not started yet or no live data available',
   };
 
-  // --- Coin Logic ---
-  const [now, setNow] = useState(new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const allCoins = user?.keys?.flatMap((key) => key.coin || []) || [];
-  const alreadyRedeemedCoin = allCoins.find(
-    (coin) =>
-      coin.usedForEventId?.toString() === eventId &&
-      coin.expiresAt &&
-      new Date(coin.expiresAt) > now
-  );
-  const unusedCoins = allCoins.filter((coin) => !coin.usedAt);
-  const hasNoCoins = user?.coinAvailable === 0 && !alreadyRedeemedCoin;
-  const showRedeemPrompt = user?.coinAvailable > 0 && !alreadyRedeemedCoin;
-  const openingBalanceMissing = !userOddsAndInvestment?.openingbalance;
-
-  // Fetch initial data on mount
+  // Fetch initial data
   const fetchInitialData = useCallback(() => {
     if (eventId) {
       dispatch(getMatchById(eventId, userOddsAndInvestment?.userId));
@@ -114,7 +94,7 @@ const ViewTip = () => {
     fetchInitialData();
   }, [dispatch, user, fetchInitialData]);
 
-  // Last known good scoreboard
+  // --- Last known good scoreboard
   const [lastGoodScoreboard, setLastGoodScoreboard] = useState(fallbackScoreboard);
   useEffect(() => {
     if (scoreboard && scoreboard.team1 && scoreboard.team2) {
@@ -122,7 +102,7 @@ const ViewTip = () => {
     }
   }, [scoreboard]);
 
-  // Investment submit handler
+  // --- Investment submit handler
   const handleInvestmentSubmit = async (e) => {
     e.preventDefault();
     if (!investmentAmount) return;
@@ -139,18 +119,65 @@ const ViewTip = () => {
     }
   };
 
-  // Coin Redeem Handler (with modal)
+  // === COIN ACCESS LOGIC ===
+  // Extract all user's coins from their keys
+  const allCoins = user?.keys?.flatMap((key) => key.coin || []) || [];
+
+  // Check for valid diamond coin (used + not expired)
+  const diamondCoin = allCoins.find(
+    (coin) =>
+      (coin.type === 'diamond' || coin.coinType === 'diamond') &&
+      coin.usedAt &&
+      coin.expiresAt &&
+      new Date(coin.expiresAt) > now
+  );
+  const hasDiamondAccess = !!diamondCoin; // this unlocks ALL events
+
+  // Check for valid gold coin for *this* event
+  const alreadyRedeemedGoldCoin = allCoins.find(
+    (coin) =>
+      (coin.type === 'gold' || !coin.type || coin.coinType === 'gold') &&
+      coin.usedForEventId?.toString() === eventId &&
+      coin.expiresAt &&
+      new Date(coin.expiresAt) > now
+  );
+
+  // Only allow redeeming coins that are not yet used
+  const unusedGoldCoins = allCoins.filter(
+    (coin) =>
+      (coin.type === 'gold' || !coin.type || coin.coinType === 'gold') &&
+      !coin.usedAt
+  );
+  const unusedDiamondCoins = allCoins.filter(
+    (coin) =>
+      (coin.type === 'diamond' || coin.coinType === 'diamond') &&
+      !coin.usedAt
+  );
+  // If diamond is already active, only allow redeeming diamond coins that aren't used. Block gold coin redemption.
+  const unusedCoins = hasDiamondAccess ? unusedDiamondCoins : [...unusedDiamondCoins, ...unusedGoldCoins];
+
+  // No coins, no gold for this event, no diamond for all events
+  const hasNoCoins = unusedCoins.length === 0 && !alreadyRedeemedGoldCoin && !hasDiamondAccess;
+
+  // Redeem prompt logic
+  const canRedeemDiamond = unusedDiamondCoins.length > 0 && !hasDiamondAccess;
+  const canRedeemGold = unusedGoldCoins.length > 0 && !alreadyRedeemedGoldCoin && !hasDiamondAccess;
+  const canShowRedeemPrompt = canRedeemDiamond || canRedeemGold;
+
+  // Opening balance prompt
+  const openingBalanceMissing = !userOddsAndInvestment?.openingbalance;
+
+  // --- Coin Redeem Modal Logic ---
   const handleRedeemClick = () => {
     setCoinMessage('');
     setShowCoinModal(true);
   };
-
   const handleSelectCoinToRedeem = async (coinId) => {
     setRedeemingCoin(true);
     setCoinMessage('');
     try {
       await dispatch(redeemCoinForAllMatches(coinId, eventId));
-      setCoinMessage('Coin redeemed successfully! Access granted for this match for 24 hours.');
+      setCoinMessage('Coin redeemed successfully! Access granted.');
       setShowCoinModal(false);
       await dispatch(loadUser());
       await dispatch(getUserMatchOddsAndInvestment(eventId));
@@ -167,7 +194,7 @@ const ViewTip = () => {
     }
   };
 
-  // Loading Spinner
+  // --- Loading Spinner ---
   if (loading || userLoading || userLoadingState) {
     return (
       <div className="text-center my-4">
@@ -176,14 +203,67 @@ const ViewTip = () => {
     );
   }
 
+  // ==========================
+  // ===== ADMIN / SUPERUSER UI
+  // ==========================
+  if (isAdminOrSuperuser) {
+    return (
+      <>
+        <AppLayout />
+        <div className="container-fluid mt-5">
+          <div className="row">
+            <div className="col-lg-8 col-md-8 col-sm-8 col-12">
+              {/* Opening Balance Warning */}
+              {openingBalanceMissing && (
+                <Alert variant="warning" className="text-center">
+                  <strong>⚠️ Please add your Opening Balance for accurate profit/loss tracking.</strong>
+                </Alert>
+              )}
+              <div className="row">
+                <div className='col-lg-6 col-md-6 col-sm-6 col-12'>
+                  <OpeningBalance
+                    investmentAmount={investmentAmount}
+                    setInvestmentAmount={setInvestmentAmount}
+                    investmentLoading={investmentLoading}
+                    handleSubmit={handleInvestmentSubmit}
+                  />
+                </div>
+                <div className='col-lg-6 col-md-6 col-sm-6 col-12'>
+                  <BalanceDisplay amount={userOddsAndInvestment?.openingbalance} />
+                </div>
+                <div className='col-lg-12 col-md-12 col-12'>
+                  <LiveTipsTable eventId={eventId} />
+                </div>
+              </div>
+            </div>
+            <div className="col-lg-4 col-md-4 col-sm-4 col-12">
+              <ScoreboardCard scoreboard={scoreboard || fallbackScoreboard} socket={socket} />
+              <IframeBox
+                eventId={eventId}
+                iframeLoaded={iframeLoaded}
+                setIframeLoaded={setIframeLoaded}
+                iframeError={iframeError}
+                setIframeError={setIframeError}
+                sportId={sportId}
+              />
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  // ===================
+  // ===== USER UI =====
+  // ===================
   return (
     <>
       <AppLayout />
       <div className="container-fluid mt-5">
         <div className="row">
           {/* Alerts */}
-          {/* Only show transaction pending alert if not already redeemed for this event */}
-          {!alreadyRedeemedCoin &&
+          {!hasDiamondAccess && !alreadyRedeemedGoldCoin &&
             Array.isArray(user?.transactions) &&
             user.transactions.some((tx) => tx.status?.toLowerCase() === 'pending') && (
               <Alert variant="danger" className="text-center">
@@ -196,8 +276,7 @@ const ViewTip = () => {
               {transactionError}
             </Alert>
           )}
-          {/* No Coins alert: only if NOT already redeemed for this event */}
-          {!alreadyRedeemedCoin && hasNoCoins && (
+          {!hasDiamondAccess && !alreadyRedeemedGoldCoin && hasNoCoins && (
             <Alert variant="warning" className="text-center">
               <strong>⚠️ No Coins Available!</strong><br />
               Please wait if you have made a transaction.<br />
@@ -209,12 +288,13 @@ const ViewTip = () => {
               </div>
             </Alert>
           )}
-          {/* Redeem prompt: only if NOT already redeemed for this event */}
-          {!alreadyRedeemedCoin && showRedeemPrompt && (
+          {canShowRedeemPrompt && (
             <>
               <Alert variant="info" className="text-center">
-                <strong>🎟️ You have coins!</strong><br />
-                Please redeem your coin to activate access for this match.
+                <strong>
+                  {'You have coins!'}<br />
+                  Please redeem your coin to activate access.
+                </strong>
               </Alert>
               <div className="mt-3 pb-3 center">
                 <Button
@@ -222,11 +302,14 @@ const ViewTip = () => {
                   onClick={handleRedeemClick}
                   disabled={unusedCoins.length === 0}
                 >
-                  Redeem Now
+                  Redeem Coin
                 </Button>
               </div>
               {coinMessage && (
-                <div className="mt-2 text-center" style={{ color: coinMessage.startsWith('Error') ? 'red' : 'green' }}>
+                <div
+                  className="mt-2 text-center"
+                  style={{ color: coinMessage.startsWith('Error') ? 'red' : 'green' }}
+                >
                   {coinMessage}
                 </div>
               )}
@@ -248,22 +331,40 @@ const ViewTip = () => {
                   <p>No unused coins available.</p>
                 ) : (
                   <ul style={{ listStyle: 'none', padding: 0 }}>
-                    {unusedCoins.map((coin) => (
-                      <li key={coin.id || coin._id} style={{ marginBottom: 12 }}>
-                        <Button
-                          variant="success"
-                          block="true"
-                          disabled={redeemingCoin}
-                          onClick={() => handleSelectCoinToRedeem(coin.id || coin._id)}
-                        >
-                          {coin.shareableCode || coin.id || coin._id}
-                        </Button>
-                      </li>
-                    ))}
+                    {unusedCoins.map((coin) => {
+                      // Block gold coin selection if diamond access is active!
+                      if (hasDiamondAccess && (coin.type === 'gold' || !coin.type || coin.coinType === 'gold')) {
+                        return null;
+                      }
+                      return (
+                        <li key={coin.id || coin._id} style={{ marginBottom: 12 }}>
+                          <Button
+                            variant={coin.type === 'diamond' || coin.coinType === 'diamond' ? 'info' : 'success'}
+                            block="true"
+                            disabled={redeemingCoin}
+                            onClick={() => handleSelectCoinToRedeem(coin.id || coin._id)}
+                          >
+                            {coin.type === 'diamond' || coin.coinType === 'diamond' ? '💎 ' : ''}
+                            {coin.shareableCode || coin.id || coin._id}
+                            {coin.type === 'diamond' || coin.coinType === 'diamond' ? ' (Diamond)' : ''}
+                            {coin.type === 'gold' || coin.coinType === 'gold' ? ' (Gold)' : ''}
+                            {coin.expiresAt && (
+                              <span style={{ fontSize: '0.85em', color: '#555', marginLeft: 8 }}>
+                                {'Expires: '}
+                                {new Date(coin.expiresAt).toLocaleString()}
+                              </span>
+                            )}
+                          </Button>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
                 {coinMessage && (
-                  <div className="mt-2 text-center" style={{ color: coinMessage.startsWith('Error') ? 'red' : 'green' }}>
+                  <div
+                    className="mt-2 text-center"
+                    style={{ color: coinMessage.startsWith('Error') ? 'red' : 'green' }}
+                  >
                     {coinMessage}
                   </div>
                 )}
@@ -282,24 +383,17 @@ const ViewTip = () => {
               <div className='col-lg-6 col-md-6 col-sm-6 col-12'>
                 <BalanceDisplay amount={userOddsAndInvestment?.openingbalance} />
               </div>
-              {/* Only show LiveTipsTable & TipHistoryTable if coin is redeemed for this event */}
-              {alreadyRedeemedCoin && (
-                <>
-                  <div className='col-lg-12 col-md-12 col-12' >
-                    <LiveTipsTable
-                      eventId={eventId}
-                    />
-                  </div>
-                </>
+              {/* Show LiveTipsTable if gold coin is redeemed for this event OR diamond is active (all events) */}
+              {(alreadyRedeemedGoldCoin || hasDiamondAccess) && (
+                <div className='col-lg-12 col-md-12 col-12'>
+                  <LiveTipsTable eventId={eventId} />
+                </div>
               )}
             </div>
           </div>
           {/* Sidebar Column */}
           <div className="col-lg-4 col-md-4 col-sm-4 col-12">
-            <ScoreboardCard
-              scoreboard={lastGoodScoreboard}
-              socket={socket}
-            />
+            <ScoreboardCard scoreboard={lastGoodScoreboard} socket={socket} />
             <IframeBox
               eventId={eventId}
               iframeLoaded={iframeLoaded}

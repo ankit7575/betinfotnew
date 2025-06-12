@@ -7,6 +7,7 @@ import { Spinner,
   // Col 
 } from 'react-bootstrap';
 import { getMatchById, addAdminBetfairOdds, getBetfairOddsForRunner } from '../../actions/matchaction';
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 import BetfairMarketTable from './BetfairMarketTable';
 import './LiveTipsTable.css';
@@ -88,34 +89,7 @@ const LiveTipsTable = ({ eventId }) => {
       />
 
       {/* Latest Tips Table */}
-      <div className="latest-odds mt-4 live-tips-scroll">
-        <h4>Latest Tip</h4>
-        <table className="table table-bordered table-striped live-tips-table">
-          <thead>
-            <tr>
-              <th>Team</th>
-              <th>Side</th>
-              <th>Odd</th>
-              <th>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-             {latestTip ? (
-                <tr>
-                  <td>{latestTip.runnerName}</td>
-                  <td>{latestTip.side || 'N/A'}</td>
-                  <td>{latestTip.rate || 'N/A'}</td>
-                  <td>{latestTip.amount || 'N/A'}</td>
-                </tr>
-              ) : (
-                <tr>
-                  <td colSpan="4" className="text-center">No runner data.</td>
-                </tr>
-              )}
-          </tbody>
-        </table>
-      </div>
-
+     
       <TipHistoryTable
         adminBetfairOdds={match?.adminBetfairOdds}
         userOwnOdds={match?.userOwnOdds}

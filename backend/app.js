@@ -49,6 +49,7 @@ const coinRoute = require("./routes/coinRoute");
 const matchRoutes = require("./routes/matchRoutes");
 const betfairRoutes = require("./routes/betfairRoutes");
 const scoreRoute = require("./routes/score");
+const userOddsRoute = require("./routes/userOddsRoutes");
 
 // Route use
 app.use("/api", scoreRoute);
@@ -58,7 +59,7 @@ app.use("/api/v1/transaction", transactionRoute);
 app.use("/api/v1", userRoutes);
 app.use("/api/v1", matchRoutes);
 app.use("/api/v1", betfairRoutes);
-
+app.use("/api/v1", userOddsRoute);
 // Health check route
 app.get("/", (req, res) => {
   res.status(200).send("✅ Backend is running.");

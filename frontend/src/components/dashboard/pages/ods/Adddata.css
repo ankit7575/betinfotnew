@@ -109,11 +109,7 @@ body {
   .latest-odds td, .history-odds td {
     font-size: 14px;
   }
-  
-  table tbody tr:hover {
-    background-color: #f1f1f1;
-  }
-  
+
   table th {
     font-weight: bold;
   }

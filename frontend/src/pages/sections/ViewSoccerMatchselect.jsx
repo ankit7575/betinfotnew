@@ -46,7 +46,7 @@ const SelectedMatchTable = ({ matches = [], user, now = new Date() }) => {
     const matchOddsMarket = markets?.find((m) => m.marketName === 'Match Odds');
     const matchOddsMarketId = matchOddsMarket?.marketId || '';
     // You can adjust the path based on the match type (soccer, tennis, cricket, etc.)
-    navigate(`/tennistip?eventId=${eventId}&marketId=${matchOddsMarketId}`);
+    navigate(`/soccertip?eventId=${eventId}&marketId=${matchOddsMarketId}`);
   };
 
   if (!selectedMatches.length) {

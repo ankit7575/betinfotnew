@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'; // <-- Add this
 import { getSoccerMatches } from '../../actions/matchaction';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import '../../components/Home/TipTable.css';
-import SelectedMatchTable from './SelectedMatchTable';
+import SelectedMatchTable from './ViewSoccerMatchselect';
 
 const ViewSoccerMatch = () => {
   const dispatch = useDispatch();
