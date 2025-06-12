@@ -19,51 +19,35 @@ const setMatchInTempStore = (eventId, matchData) => {
   tempStore[eventId] = matchData;
 };
 
-const getNetProfitInput = (match, userId) => {
+const getNetProfitInput = (runners, matchRunners, amount) => {
   const selection_ids = [];
   const history = [];
-  match?.matchRunners?.map(runner => {
+  matchRunners?.map(runner => {
     selection_ids.push(parseInt(runner.runnerId ? runner.runnerId : runner.selectionId));
   });
-  // Get user's last investment time
-  let openingbalance = 0;
-  if (userId) {
-    const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
-    openingbalance = investmentEntry?.amount || 0;
-    const userOwnOdds = match?.userOwnOdds?.find(o => o.userId === userId);
-    userOwnOdds?.runners?.map((runnerOdd) =>
-      runnerOdd.layingHistory?.map((tipHistory) => {
-        history.push({
-          selection_id : parseInt(runnerOdd.selectionId),
-          side : tipHistory.odds?.back ? "Back" : tipHistory.odds?.lay ? "Lay" : "",
-          odd : parseFloat(tipHistory.odds?.back ?? tipHistory.odds?.lay ?? 0),
-          amount : parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0),
-        });
-      })
-    );
-  }
-  match?.adminBetfairOdds?.map((runnerOdd) =>
+
+  runners?.map((runnerOdd) =>
     runnerOdd.layingHistory?.map((tipHistory) => {
-      const amount = userId ? (parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0) * openingbalance)/ match?.openingbalance || 200000  : parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0);
       history.push({
         selection_id : parseInt(runnerOdd.selectionId),
         side : tipHistory.odds?.back ? "Back" : tipHistory.odds?.lay ? "Lay" : "",
         odd : parseFloat(tipHistory.odds?.back ?? tipHistory.odds?.lay ?? 0),
-        amount : parseInt(amount),
+        amount : parseInt(tipHistory.Ammount?.back ?? tipHistory.Ammount?.lay ?? 0),
       });
     })
   );
-  
+ 
   const input = {
+    investment_limit: parseInt(amount),
     selection_ids: selection_ids,
     history: history,
   };
   return input;
 };
 
-const getNetProfit = async ({match, tip, userId}) => {
+const getNetProfit = async ({runners, matchRunners, tip, amount}) => {
   try {
-    const input = getNetProfitInput(match, userId);
+    const input = getNetProfitInput(runners, matchRunners, amount);
     if (tip) {
       input.history.push(tip);
     }
@@ -547,27 +531,39 @@ const getBetfairOddsForRunner = catchAsyncErrors(async (req, res, next) => {
 
     // Get user's last investment time
     let openingbalance = match?.openingbalance;
+    let runners = match?.adminBetfairOdds;
     if (userId) {
       const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
       openingbalance = investmentEntry?.amount || 0;
+      runners = match?.userOwnOdds.find(u => u.userId === userId);
     }
 
     // Enrich runners: always set team name
     const runnerData = await Promise.all(marketData.runners.map(async (runner) => {
       const backAmount = await getAmount({ side: "Back", odd: runner?.ex?.availableToBack[0]?.price, investmentLimit: openingbalance });
       const layAmount = await getAmount({ side: "Lay", odd: runner?.ex?.availableToLay[0]?.price, investmentLimit: openingbalance });
-      const backNet = await getNetProfit({match: match, tip: {
-        selection_id : parseInt(runner.selectionId),
-        side : "Back",
-        odd : parseFloat(runner?.ex?.availableToBack[0]?.price),
-        amount : parseInt(backAmount),
-      }, userId: userId});
-      const layNet = await getNetProfit({match: match, tip: {
-        selection_id : parseInt(runner.selectionId),
-        side : "Lay",
-        odd : parseFloat(runner?.ex?.availableToLay[0]?.price),
-        amount : parseInt(layAmount),
-      }, userId: userId});
+      const backNet = await getNetProfit({
+        runners: runners,
+        matchRunners: match?.matchRunners, 
+        tip: {
+          selection_id : parseInt(runner.selectionId),
+          side : "Back",
+          odd : parseFloat(runner?.ex?.availableToBack[0]?.price),
+          amount : parseInt(backAmount),
+        }, 
+        amount: openingbalance
+      });
+      const layNet = await getNetProfit({
+        runners: runners,
+        matchRunners: match?.matchRunners, 
+        tip: {
+          selection_id : parseInt(runner.selectionId),
+          side : "Lay",
+          odd : parseFloat(runner?.ex?.availableToLay[0]?.price),
+          amount : parseInt(layAmount),
+        }, 
+        amount:  openingbalance
+      });
       return {
         selectionId: runner.selectionId,
         runnerName: runnerNameMap[runner.selectionId?.toString()] || `Runner ${runner.selectionId}`,
@@ -640,7 +636,10 @@ const getMatchById = catchAsyncErrors(async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Match not found in database.' });
     }
 
-    const data = await getNetProfit({match: match, userId: userId});
+    const investmentEntry = match?.userOpeningbalanceHistory?.filter(entry => entry?.userId?.toString() === userId)?.sort((a, b) => new Date(b?.date) - new Date(a?.date))[0] ?? null;
+    const amount = userId ? investmentEntry?.amount : match?.openingbalance;
+    const runners = userId ? match?.userOwnOdds.find(u => u.userId === userId) : match?.addAdminBetfairOdds;
+    const data = await getNetProfit({runners: runners, matchRunners: match?.matchRunners, amount: amount});
 
     // Optional: You can filter or transform the data as needed
     const processedMatch = {
