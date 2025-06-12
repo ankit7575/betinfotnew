@@ -6,13 +6,14 @@ import { Spinner,
   // Row, 
   // Col 
 } from 'react-bootstrap';
-import { getMatchById, addAdminBetfairOdds, getBetfairOddsForRunner } from '../../actions/matchaction';
+import { getMatchById, addUserBetfairOdds, getBetfairOddsForRunner } from '../../actions/matchaction';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 import BetfairMarketTable from './BetfairMarketTable';
 import './LiveTipsTable.css';
 import TipHistoryTable from './TipHistoryTable';
 import socket from '../../socket';
+import UserTipHistoryTable from './UserTipHistoryTable';
 
 const LiveTipsTable = ({ eventId }) => {
   const dispatch = useDispatch();
@@ -34,6 +35,7 @@ const LiveTipsTable = ({ eventId }) => {
 
   // For one-click odds from BetfairMarketTable
   const handleOddsClick = async (tip) => {
+    if (!userOddsAndInvestment?.userId) return;
     try {
       const data = {
         odds: {
@@ -44,10 +46,8 @@ const LiveTipsTable = ({ eventId }) => {
           back: tip?.side === 'Back' ? parseFloat(tip?.amount) : null,
           lay: tip?.side === 'Lay' ? parseFloat(tip?.amount) : null,
         },
-        userId: userOddsAndInvestment?.userId,
-        type: 'user',
       };
-      await dispatch(addAdminBetfairOdds(eventId, tip?.runner, data));
+      await dispatch(addUserBetfairOdds(userOddsAndInvestment?.userId, eventId, tip?.runner, data));
       await dispatch(getMatchById(eventId, userOddsAndInvestment?.userId));
     } catch (error) {
       console.error("Error submitting from table:", error);
@@ -91,12 +91,15 @@ const LiveTipsTable = ({ eventId }) => {
      
       <TipHistoryTable
         adminBetfairOdds={match?.adminBetfairOdds}
-        userOwnOdds={match?.userOwnOdds}
         adminOpeningBalance={match?.openingbalance || 200000}
         userOpeningBalance={userOddsAndInvestment?.openingbalance || 0}
         userId={userOddsAndInvestment?.userId}
         eventId={eventId}
         socket={socket}
+      />
+      
+      <UserTipHistoryTable
+        userOwnOdds={match?.userOwnOdds}
       />
     </div>
   );

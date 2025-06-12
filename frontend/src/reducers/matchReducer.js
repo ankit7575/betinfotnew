@@ -20,7 +20,7 @@ import {
   USER_ADD_INVESTMENT_REQUEST, USER_ADD_INVESTMENT_SUCCESS, USER_ADD_INVESTMENT_FAIL,
   UPDATE_MATCH_SELECTED_STATUS_REQUEST, UPDATE_MATCH_SELECTED_STATUS_SUCCESS, UPDATE_MATCH_SELECTED_STATUS_FAIL,
   UPDATE_MATCH_ADMIN_STATUS_REQUEST, UPDATE_MATCH_ADMIN_STATUS_SUCCESS, UPDATE_MATCH_ADMIN_STATUS_FAIL,
-  CLEAR_ERRORS,
+  CLEAR_ERRORS, ADMIN_ADD_INVESTMENT_REQUEST, ADMIN_ADD_INVESTMENT_SUCCESS, ADMIN_ADD_INVESTMENT_FAIL, ADD_USER_BETFAIR_ODDS_REQUEST, ADD_USER_BETFAIR_ODDS_SUCCESS, ADD_USER_BETFAIR_ODDS_FAIL
 } from "../constants/matchConstants";
 
 const initialState = {
@@ -36,8 +36,11 @@ const initialState = {
   adminBetfairOdds: null,
   layingDataForRunnerLatest: null,
   layingDataForRunnerHistory: null,
-
+  adminInvestment: null,
+  userBetfairOdds: null,
   // Loading flags
+  loadingUserOdds: false,
+  loadingAdminInvestment: false,
   loadingMatches: false,
   loadingMatch: false,
   loadingOdds: false,
@@ -124,6 +127,13 @@ export const matchReducer = (state = initialState, action) => {
     case MANAGE_USER_INVESTMENT_FAIL:
     case USER_ADD_INVESTMENT_FAIL:
       return { ...state, loadingUserInvestment: false, error: action.payload };
+   
+    case ADMIN_ADD_INVESTMENT_REQUEST:
+      return { ...state, loadingAdminInvestment: true, error: null };
+    case ADMIN_ADD_INVESTMENT_SUCCESS:
+      return { ...state, loadingAdminInvestment: false, adminInvestment: action.payload };
+    case ADMIN_ADD_INVESTMENT_FAIL:
+      return { ...state, loadingAdminInvestment: false, error: action.payload };
 
     // === Admin Odds ===
     case AUTO_CALCULATE_ADMIN_BETFAIR_ODDS_REQUEST:
@@ -135,6 +145,13 @@ export const matchReducer = (state = initialState, action) => {
     case AUTO_CALCULATE_ADMIN_BETFAIR_ODDS_FAIL:
     case ADD_ADMIN_BETFAIR_ODDS_FAIL:
       return { ...state, loadingAdminOdds: false, error: action.payload };
+  
+    case ADD_USER_BETFAIR_ODDS_REQUEST:
+      return { ...state, loadingUserOdds: true, error: null };
+    case ADD_USER_BETFAIR_ODDS_SUCCESS:
+      return { ...state, loadingUserOdds: false, userBetfairOdds: action.payload };
+    case ADD_USER_BETFAIR_ODDS_FAIL:
+      return { ...state, loadingUserOdds: false, error: action.payload };
 
     // === Laying Data (Admin, Runner) ===
     case UPDATE_ADMIN_LAYING_DATA_REQUEST:

@@ -882,7 +882,7 @@ function sanitizeOdds(oddsArr) {
 const addAdminBetfairOdds = catchAsyncErrors(async (req, res, next) => {
   const io = req.app.get("io");
   const { eventId, selectionId } = req.params;
-  const { odds, Ammount, Profit, userId, type } = req.body;
+  const { odds, Ammount, Profit } = req.body;
 
   const match = await Match.findOne({ eventId });
   if (!match) return res.status(404).json({ message: "Match not found" });
@@ -893,60 +893,31 @@ const addAdminBetfairOdds = catchAsyncErrors(async (req, res, next) => {
   const matchRunner = match.matchRunners.find(r => r.runnerId === String(selectionId));
   const runnerName = matchRunner ? matchRunner.runnerName : "Unknown Runner";
 
-  if (type === 'user') {
-    const layingEntry = {
-      odds,
-      Ammount,
-      timestamp: new Date(),
-    };
-    const userOwnOdds = match.userOwnOdds.find(o => o.userId === userId);
-    if (!userOwnOdds) {
-      match.userOwnOdds.push({
-        userId: userId,
-        runners: [{
-          selectionId: Number(selectionId),
-          runnerName: runnerName,
-          layingHistory: [layingEntry],
-        }],
-      });
-    } else {
-      const runner = userOwnOdds?.runners?.find(o => Number(o.selectionId) === Number(selectionId))
-      if (!runner) {
-        userOwnOdds.runners = [{
-          selectionId: Number(selectionId),
-          runnerName: runnerName,
-          layingHistory: [layingEntry],
-        }];
-      } else {
-        runner.layingHistory.push(layingEntry);
-      }
-    }
-  } else {
-    let existingOdds = match.adminBetfairOdds.find(o => o.selectionId === Number(selectionId));
-    const layingEntry = {
+
+  let existingOdds = match.adminBetfairOdds.find(o => o.selectionId === Number(selectionId));
+  const layingEntry = {
+    odds,
+    Ammount,
+    Profit,
+    timestamp: new Date(),
+  };
+  
+  if (!existingOdds) {
+    match.adminBetfairOdds.push({
+      selectionId: Number(selectionId),
+      runnerName,
       odds,
       Ammount,
       Profit,
-      timestamp: new Date(),
-    };
-    
-    if (!existingOdds) {
-      match.adminBetfairOdds.push({
-        selectionId: Number(selectionId),
-        runnerName,
-        odds,
-        Ammount,
-        Profit,
-        createdAt: new Date(),
-        layingHistory: [layingEntry],
-      });
-    } else {
-      existingOdds.odds = odds;
-      existingOdds.Ammount = Ammount;
-      existingOdds.Profit = Profit;
-      existingOdds.createdAt = new Date();
-      existingOdds.layingHistory.push(layingEntry);
-    }
+      createdAt: new Date(),
+      layingHistory: [layingEntry],
+    });
+  } else {
+    existingOdds.odds = odds;
+    existingOdds.Ammount = Ammount;
+    existingOdds.Profit = Profit;
+    existingOdds.createdAt = new Date();
+    existingOdds.layingHistory.push(layingEntry);
   }
 
   // Clear old user odds for this match

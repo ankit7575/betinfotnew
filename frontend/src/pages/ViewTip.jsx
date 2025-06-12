@@ -80,15 +80,14 @@ const ViewTip = () => {
 
   // Fetch initial data
   const fetchInitialData = useCallback(() => {
-    if (eventId) {
-      dispatch(getMatchById(eventId, userOddsAndInvestment?.userId));
+    if (eventId && user?._id) {
+      dispatch(getMatchById(eventId, user?._id));
       dispatch(getUserMatchOddsAndInvestment(eventId));
       dispatch(getScoreboardByEventId(eventId));
     } else {
       navigate('/');
     }
-  }, [dispatch, eventId, navigate, userOddsAndInvestment?.userId]);
-
+  }, [dispatch, eventId, navigate, user?._id]);
   useEffect(() => {
     if (!user) dispatch(loadUser());
     fetchInitialData();

@@ -43,6 +43,12 @@ import {
   UPDATE_MATCH_ADMIN_STATUS_REQUEST,
   UPDATE_MATCH_ADMIN_STATUS_SUCCESS,
   UPDATE_MATCH_ADMIN_STATUS_FAIL,
+  ADD_USER_BETFAIR_ODDS_REQUEST,
+  ADD_USER_BETFAIR_ODDS_SUCCESS,
+  ADD_USER_BETFAIR_ODDS_FAIL,
+  ADMIN_ADD_INVESTMENT_REQUEST,
+  ADMIN_ADD_INVESTMENT_SUCCESS,
+  ADMIN_ADD_INVESTMENT_FAIL,
 } from '../constants/matchConstants';
 
 const API_URL = process.env.REACT_APP_API_URL;
@@ -218,7 +224,22 @@ export const addAdminBetfairOdds = (eventId, selectionId, oddsData) => async (di
   }
 };
 
-// ✅ 7. Get User Match Odds and Investment
+// ✅ 7. Add User Betfair Odds
+export const addUserBetfairOdds = (userId, eventId, selectionId, oddsData) => async (dispatch) => {
+  try {
+    dispatch({ type: ADD_USER_BETFAIR_ODDS_REQUEST });
+    const { data } = await axios.post(
+      `${API_URL}/user/${userId}/match/${eventId}/runner/${selectionId}/odds`,
+      oddsData,
+      getAuthConfig()
+    );
+    dispatch({ type: ADD_USER_BETFAIR_ODDS_SUCCESS, payload: data });
+  } catch (error) {
+    dispatch({ type: ADD_USER_BETFAIR_ODDS_FAIL, payload: getErrorMessage(error) });
+  }
+};
+
+// ✅ 8. Get User Match Odds and Investment
 export const getUserMatchOddsAndInvestment = (eventId) => async (dispatch) => {
   try {
     dispatch({ type: GET_USER_MATCH_ODDS_INVESTMENT_REQUEST });
@@ -232,7 +253,7 @@ export const getUserMatchOddsAndInvestment = (eventId) => async (dispatch) => {
   }
 };
 
-// ✅ 8. Update User Odds (Optional feature)
+// ✅ 9. Update User Odds (Optional feature)
 export const updateUserOddsWithHistory = (
   eventId,
   selectionId,
@@ -253,7 +274,7 @@ export const updateUserOddsWithHistory = (
   }
 };
 
-// ✅ 9. Add User Investment
+// ✅ 10. Add User Investment
 export const userAddInvestment = (eventId, amount) => async (dispatch) => {
   try {
     dispatch({ type: USER_ADD_INVESTMENT_REQUEST });
@@ -271,7 +292,25 @@ export const userAddInvestment = (eventId, amount) => async (dispatch) => {
   }
 };
 
-// ✅ 10. Clear Errors
+// ✅ 11. Add Admin Investment
+export const adminAddInvestment = (eventId, amount) => async (dispatch) => {
+  try {
+    dispatch({ type: ADMIN_ADD_INVESTMENT_REQUEST });
+    const { data } = await axios.post(
+      `${API_URL}/match/${eventId}/admin/investment`,
+      { amount },
+      getAuthConfig()
+    );
+    dispatch({ type: ADMIN_ADD_INVESTMENT_SUCCESS, payload: data });
+  } catch (error) {
+    dispatch({
+      type: ADMIN_ADD_INVESTMENT_FAIL,
+      payload: getErrorMessage(error),
+    });
+  }
+};
+
+// ✅ 12. Clear Errors
 export const clearErrors = () => (dispatch) => {
   dispatch({ type: CLEAR_ERRORS });
 };

@@ -6,7 +6,7 @@ import {
   getMatchById,
   addAdminBetfairOdds,
   getBetfairOddsForRunner,
-  userAddInvestment, // ⬅️ import this!
+  adminAddInvestment, // ⬅️ import this!
 } from '../../../../actions/matchaction';
 import Layout from "../../layouts/layout";
 import { Spinner, Button, Form, Row, Col, Alert } from 'react-bootstrap';
@@ -33,7 +33,7 @@ const Adddata = () => {
   });
 
   // 👇 State for investment
-  const [investmentAmount, setInvestmentAmount] = useState('');
+  const [investmentAmount, setInvestmentAmount] = useState(match?.openingbalance);
   const [investmentLoading, setInvestmentLoading] = useState(false);
   const [investmentSuccess, setInvestmentSuccess] = useState('');
   const [investmentError, setInvestmentError] = useState('');
@@ -45,6 +45,10 @@ const Adddata = () => {
       navigate('/');
     }
   }, [dispatch, eventId, navigate]);
+
+  useEffect(() => {
+    setInvestmentAmount(match?.openingbalance)
+  }, [match?.openingbalance]);
 
   // Fetch Betfair runners (Market Table)
   useEffect(() => {
@@ -119,9 +123,8 @@ const Adddata = () => {
     setInvestmentSuccess('');
     setInvestmentError('');
     try {
-      await dispatch(userAddInvestment(eventId, Number(investmentAmount)));
+      await dispatch(adminAddInvestment(eventId, Number(investmentAmount)));
       setInvestmentSuccess('Investment added successfully!');
-      setInvestmentAmount('');
       await dispatch(getMatchById(eventId));
     } catch (error) {
       setInvestmentError('Failed to add investment amount.');
